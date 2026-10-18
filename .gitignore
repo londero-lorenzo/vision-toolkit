@@ -9,10 +9,10 @@
 **/.ipynb_checkpoints
 .pytest_cache
 
-# exclude data (frame e video delle lezioni: contengono il docente), modelli scaricati e output
-data
-models
-output
+# exclude data (lecture frames and videos show the lecturer), downloaded models and outputs
+/data
+/models
+/output
 
 # exclude images
 *.png

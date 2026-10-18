@@ -4,17 +4,15 @@ import numpy as np
 
 def iter_frames(path, step=1.0, start=0.0, end=None, crop=None):
     """
-    Scorre il video un frame ogni `step` secondi.
+    Walk through the video, one frame every `step` seconds.
 
-    crop: (x, y, w, h) opzionale, per tagliare via l'interfaccia del player
-    se il video è una registrazione dello schermo.
+    crop: optional (x, y, w, h), to cut away the player interface when the
+    video is a screen recording.
 
-    Produce:
-        (t_secondi, frame_bgr)
+    Yields:
+        (t_seconds, frame_bgr)
     """
-    cap = cv2.VideoCapture(str(path))
-    if not cap.isOpened():
-        raise FileNotFoundError(f"Impossibile aprire il video: {path}")
+    cap = _open(path)
     duration = cap.get(cv2.CAP_PROP_FRAME_COUNT) / (cap.get(cv2.CAP_PROP_FPS) or 25)
     end = duration if end is None else min(end, duration)
 
@@ -40,12 +38,12 @@ def apply_crop(frame, crop):
 
 def median_frame(path, samples=30, crop=None):
     """
-    Mediana temporale di `samples` frame distribuiti su tutto il video.
+    Temporal median of `samples` frames spread over the whole video.
 
-    Il docente si sposta, quindi nella mediana sparisce: è il frame giusto
-    su cui cercare la lavagna.
+    Whatever moves (a person walking in front of the scene) disappears from
+    the median, which leaves the static background.
     """
-    cap = cv2.VideoCapture(str(path))
+    cap = _open(path)
     n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = []
     for i in np.linspace(0, n - 1, samples).astype(int):
@@ -58,6 +56,14 @@ def median_frame(path, samples=30, crop=None):
 
 
 def format_time(t):
+    """Seconds as "HHhMMmSSs", the timestamp used in output file names."""
     m, s = divmod(int(t), 60)
     h, m = divmod(m, 60)
     return f"{h:02d}h{m:02d}m{s:02d}s"
+
+
+def _open(path):
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open video: {path}")
+    return cap

@@ -1,56 +1,82 @@
 # CLAUDE.md
 
-Toolkit in Python per la segmentazione di immagini e video: separare soggetti dallo sfondo, ricostruire ciò che coprono, seguire gesti e posizioni nel tempo. È un progetto **generale**: ogni applicazione concreta è un caso d'uso costruito sopra moduli riusabili.
+**vision-toolkit**: a Python toolkit for image and video processing. It separates subjects from the
+background, rebuilds what they cover and follows gestures and positions over time. The project is
+**general**: every concrete application is a use case built on reusable layers, and models are
+pluggable, picked by name from a catalog.
 
-## Stato e compito
+## State
 
-Il primo caso d'uso è già implementato: **lavagna senza docente**. Dai video delle lezioni toglie la docente, salva la lavagna pulita a ogni cambiamento e registra il punto indicato con il timestamp. È descritto nel `README.md`, in `notebooks/` e in `tests/test_synthetic.py`. Il codice in `src/image_segmentation/` e il comando `lavagna` sono scritti per quel caso.
+- First use case, implemented: **board without lecturer** (`vision-toolkit board`). From lecture
+  videos it removes the lecturer, saves a clean board snapshot at every change and logs the pointed
+  spot with its timestamp. Page: `docs/usecases/board.md`. It still needs a real lecture video, and
+  pointing is right in 7 frames out of 10 on the synthetic video.
+- Next step: absorb `D:\Programmazione\Projects\image-stitching` as the `canvas` use case. Where it
+  lands (a registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is
+  in `docs/architecture.md`.
 
-Il compito è rendere il progetto **modulabile** e impacchettare il caso della lavagna come primo caso d'uso. La struttura la decidi tu: pacchetti, interfacce, come si compongono i passi, come si cambiano i modelli, nomi e CLI. Il codice esistente è materiale da riorganizzare, non uno scheletro da rispettare. Per lo stesso motivo il README, oggi intitolato alla lavagna, va riscritto per il progetto generale.
+## Layout
 
-Prima di spostare o rinominare il codice esistente, proponi la struttura a Lorenzo e aspetta il suo ok. Il formato di output del caso lavagna (snapshot `board_<hh>h<mm>m<ss>s.png` e `pointing.jsonl`) lo usa il vault: se cambia, va detto.
+```
+src/vision_toolkit/
+  core/       video I/O, plane geometry, temporal reconstruction (imports nothing internal)
+  tasks/      interfaces per domain: Protocol + NumPy results (segmentation, pose)
+  models/     implementations by backend (mediapipe/) + catalog.py (models by name, downloads)
+  ops/        model-agnostic algorithms on task results (crop_refine, skeleton, pointing)
+  usecases/   board/ (detect, person_mask, pipeline, cli)
+  cli.py      `vision-toolkit models|board`
+```
 
-**Lezioni del primo caso d'uso**, utili oltre la lavagna:
-- I modelli con input piccolo (DeepLab V3 a 257×257) perdono i soggetti piccoli nel frame intero: si ritaglia prima, oppure si usa un modello a due passi come PoseLandmarker.
-- Uno sfondo statico con un soggetto in movimento si ricostruisce con la mediana temporale dei pixel non coperti, dopo averlo portato in un piano comune con un'omografia.
-- Il colore distingue bene uno sfondo uniforme, ma non soggetti chiari su tratti chiari: serve come rifinitura, non come criterio principale.
-- I landmark della posa danno più di una maschera: per esempio il punto indicato e l'angolo del braccio.
+`docs/architecture.md` is the reference. It covers the layer rules, what belongs in each layer and
+how to make each kind of change. Read it before adding a model, a task, an op or a use case.
+`tests/test_layers.py` enforces the import rules and checks that every module appears in the
+document. A new module therefore goes into the document's module map too. Larger decisions get a
+record in `docs/decisions/`, in the existing format.
 
-Cosa è specifico e cosa è generico nel codice attuale:
-- `board.py`: quadrilatero di una lavagna;
-- `person.py`: persona con MediaPipe;
-- `reconstruction.py`: sfondo statico su un piano rettificato;
-- `video.py`: lettura dei frame.
+Board output format: snapshots `board_<hh>h<mm>m<ss>s.png`, `board_final.png`, `median.png`,
+`quad.json` (key `quad`) and `pointing.jsonl` (keys `t, frame_xy, board_xy, board_xy_norm,
+arm_angle, occluded_fraction, snapshot`). The vault reads it, and `tests/usecases/test_board_pipeline.py`
+pins it. Any change must be agreed with Lorenzo first.
 
-È un punto di partenza per decidere i confini, non una decisione già presa.
+## Data
 
-## Dati
+- `data/`, `models/` and `output/`, as well as images and videos, are outside git (`.gitignore`).
+  Lecture frames show a real person: they are never committed, published or attached to issues and PRs.
+- Notebooks are committed **without output**.
+- Public tests and examples use synthetic data (`tests/fakes.py`).
+- `tests/usecases/test_board_synthetic.py` needs `data/frame/lezione_prova_cit_censured.png` and is
+  skipped without it.
+- The university vault `D:\Uniud\ms-aics` provides the sources and is **out of scope**: read it only
+  if Lorenzo asks, never write to it.
 
-- `data/`, `models/` e `output/`, insieme a immagini e video, sono fuori da git (`.gitignore`). I frame delle lezioni mostrano una persona reale: non vanno mai committati, pubblicati o allegati a issue e PR.
-- I notebook si committano **senza output**.
-- Test ed esempi pubblici usano dati sintetici.
-- `tests/test_synthetic.py` richiede `data/frame/lezione_prova_cit_censured.png` e senza quel file viene saltato.
-- Il vault universitario `D:\Uniud\ms-aics` fornisce le fonti ed è **fuori perimetro**: si legge solo se Lorenzo lo chiede, non ci si scrive mai.
+## Environment
 
-## Ambiente
-
-- Windows, Git Bash. `python` non è nel PATH: usa `.env\Scripts\python` oppure il launcher `py`.
-- Versioni: Python 3.12, OpenCV 5.0, NumPy 2.x, MediaPipe Tasks 1.1.1.
-- Si lavora su CPU. La GPU (GTX 1050 Ti, 4 GB) non è usata.
+- Windows, Git Bash. `python` is not on PATH: use `.env\Scripts\python` or the `py` launcher.
+- Versions: Python 3.12, OpenCV 5.0, NumPy 2.x, MediaPipe Tasks 1.1.1.
+- CPU only. The GPU (GTX 1050 Ti, 4 GB) is not used.
+- `mediapipe` requires `opencv-contrib-python`, while the core declares `opencv-python`. Both install
+  the same `cv2` module, which is why the environment has both. Do not change this without Lorenzo.
 
 ```
 py -m venv .env
 .env\Scripts\activate
-pip install -e ".[dev]"
-python scripts/download_models.py   # modelli MediaPipe in models/
+pip install -e ".[dev,mediapipe]"
+vision-toolkit models download       # model files into models/ (or $VISION_TOOLKIT_MODELS)
 pytest -s tests
-jupyter lab                          # dalla radice, poi notebooks/
+jupyter lab                          # from the root, then notebooks/
 ```
 
-**MediaPipe:** le maschere si leggono sempre come `.numpy_view().squeeze().copy()`. La vista punta alla memoria del risultato: se il risultato è temporaneo, l'accesso successivo provoca un crash nativo (kernel Jupyter morto, access violation), non un'eccezione.
+**MediaPipe:** masks are always read as `.numpy_view().squeeze().copy()`, through
+`models/mediapipe/_common.py: read_mask`. The view points to the result's memory. If the result is a
+temporary, the next access causes a native crash (dead Jupyter kernel, access violation), not an exception.
 
-## Convenzioni
+## Conventions
 
-- **Lingua:** italiano per README, docstring e commenti; i termini tecnici restano in inglese. Commit in inglese, conventional commits con scope (`feat(notebook): ...`), come in `D:\Programmazione\Projects\image-stitching`, il progetto fratello da cui vengono layout e stile.
-- **Git:** niente commit senza il «sì» di Lorenzo. Proponi file e messaggio e aspetta. Nel commit va la riga `Co-Authored-By` di Claude. File aggiunti per nome, mai `git add -A`. Mai `push --force` né `--no-verify`. Nessun remote né `gh repo create` senza conferma.
-- Il contesto della sessione che ha creato la repo (esperimenti, numeri, motivazioni) è nella memoria di Claude per questo progetto.
+- **Language:** English everywhere: code, docstrings, comments, CLI, notebooks, docs, this file
+  (`docs/decisions/0004-english.md`). Conversations with Lorenzo are in Italian. Commits are in English,
+  as conventional commits with a scope (`feat(models): ...`), like in `image-stitching`.
+- **Git:** no commit without Lorenzo's «sì». Propose the files and the message, then wait. Commits carry
+  Claude's `Co-Authored-By` line. Add files by name, never `git add -A`. Never `push --force` or
+  `--no-verify`. No remote and no `gh repo create` without confirmation.
+- The context of the session that created the repo (experiments, figures, reasons) is in Claude's
+  memory for this project.

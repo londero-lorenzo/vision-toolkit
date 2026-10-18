@@ -1,137 +1,106 @@
-# Lavagna senza docente
+# vision-toolkit
 
-Tool in Python per togliere il docente dalla lavagna nei video delle lezioni e sapere, istante per istante, cosa sta indicando.
+Python toolkit for image and video processing: separate subjects from the background, rebuild what
+they cover, follow gestures and positions over time. Each concrete application is a **use case**
+built on reusable layers. Models are **pluggable**: a use case picks them by name, so a new model, or
+a model for a new domain, does not change the code that uses it.
 
-# Perché esiste
+## Use cases
 
-Uno screenshot della lavagna piena, a fine lezione, perde il contesto: mentre spiega, il docente indica le parti di cui sta parlando, e quel legame serve per allineare la lavagna alla trascrizione nei riassunti.
+| Use case | Command | What it does | Docs |
+|---|---|---|---|
+| Board without lecturer | `vision-toolkit board` | removes the lecturer from lecture videos, saves a clean snapshot of the board at every change and logs the pointed spot with its timestamp | [docs/usecases/board.md](docs/usecases/board.md) |
+| Canvas stitching | `vision-toolkit canvas` (planned) | merges overlapping exports of a canvas, absorbed from `image-stitching` | [architecture](docs/architecture.md#where-future-work-lands) |
 
-Il tool produce:
-- la lavagna ricostruita **senza docente**, con uno snapshot ogni volta che il contenuto cambia (scrittura o cancellazione)
-- un log con timestamp del **punto indicato** dal docente, in coordinate della lavagna, da incrociare con i timestamp della trascrizione
-
-# Come funziona
-
-1. **Lavagna**: quadrilatero trovato sulla mediana temporale dei frame (il docente si muove e nella mediana sparisce), poi rettificato con un'omografia. In alternativa i 4 angoli si passano a mano (`--quad`), una volta per aula.
-2. **Docente**: maschera da MediaPipe PoseLandmarker, più le braccia disegnate come segmenti tra i landmark spalla, gomito, polso, indice. Facoltativo: DeepLab V3 sul ritaglio della persona (`--refine`).
-3. **Ricostruzione**: per ogni pixel della lavagna rettificata, mediana degli ultimi N campioni in cui non era coperto. Un pixel coperto ora era visibile poco prima o lo sarà poco dopo.
-4. **Punto indicato**: punta dell'indice del braccio più sollevato rispetto al busto, portata in coordinate della lavagna.
-
-# Togliere, non oscurare
-
-Il docente si **toglie** dalla lavagna, non si oscura. Oscurarlo (blur, sagoma, colore medio) è peggio sotto entrambi gli aspetti:
-- **privacy**: la sagoma resta e, a seconda del blur, la persona si riconosce ancora
-- **contenuto**: il corpo copre proprio la lavagna che serve. Nel frame di prova (CIT, 11:33) la docente indica `H_2(P_1/2) = 1/2 log2 2 + 1/2 log2 2 = 1`, e il suo corpo copre la colonna con la definizione di `H_D(P)`
-
-Il gesto serve, ma solo come dato: il punto indicato si estrae finché la persona è nel frame e si salva come metadato in `pointing.jsonl`, solo coordinate e niente pixel della persona. In uscita restano due prodotti separati, la lavagna pulita e il log del punto indicato. Sovrapponendoli si ottiene la lavagna pulita con la zona indicata in evidenza.
-
-Ricostruire dai frame vicini risolve anche il caso in cui la mano copre proprio la formula indicata.
-
-Nel vault di studio entrano solo gli snapshot puliti e `pointing.jsonl`. I frame con il docente, anche censurati, restano in `data/`, fuori da git.
-
-# Dalla trascrizione alla formula
-
-Il caso d'uso che guida il progetto: nella trascrizione si sente "Here we are calculating the entropy" a un certo minuto, e si vuole sapere quale formula sta indicando.
-
-1. Si cerca la frase nella trascrizione e si legge il suo timestamp.
-2. Si prende la finestra di frame attorno a quel timestamp.
-3. Dentro la finestra si tengono solo i frame con un gesto di puntamento (`arm_angle`, persistenza su più campioni).
-4. Si sovrappone la zona indicata allo snapshot pulito di quell'istante.
-5. Claude legge la zona e dice quale formula è e come si lega a ciò che il docente sta dicendo.
-
-**Granularità della trascrizione.** Le trascrizioni del vault (`*.audio.md`) hanno un timestamp per blocco di parlato (0:21, 1:27, 2:28…), non per frase. Da una frase si risale quindi a una finestra di circa un minuto, non al secondo. Ci sono due strade:
-- dentro la finestra si scelgono i frame con un gesto di puntamento, come al passo 3 (basta per partire)
-- oppure si ritrascrive l'audio con timestamp per parola (Whisper li fornisce), e la finestra scende a pochi secondi
-
-**Precisione richiesta.** Basta una **zona** (un box sulla lavagna), non un punto preciso: la lettura fine della formula la fa Claude sul ritaglio. Questo conta soprattutto quando il docente indica da lontano, col braccio teso, invece di toccare la lavagna.
-
-Difficoltà stimata, dalla più bassa:
-- timestamp → frame (ffmpeg) e ricerca della frase nella trascrizione: facile
-- lavagna pulita: media, è soprattutto fusione temporale; la finestra va tenuta corta perché la lavagna cambia (scrittura, cancellazione)
-- puntamento da lontano: la parte più delicata
-
-# Cosa è emerso dagli esperimenti
-
-Su un frame della lezione di CIT (`notebooks/01_frame_singolo.ipynb`):
-
-| Strada | Esito |
-|---|---|
-| DeepLab V3 sul frame intero (demo web MediaPipe) | 0 pixel di persona, confidenza massima 0.09 |
-| DeepLab V3 su un ritaglio attorno al docente | persona trovata, confidenza 0.9997 |
-| PoseLandmarker sul frame intero | persona trovata, indice sulla punta delle dita |
-| Colore (pelle, ardesia, gesso in Lab) | ardesia compatta e separabile; pelle e gesso stessa luminosità, 10% dei pixel del braccio classificati come gesso |
-
-- Il problema di DeepLab è la **risoluzione** (gira a 257×257, il docente diventa pochi pixel), non il colore. La media dei colori per regione aiutava ma presuppone la maschera: è circolare.
-- Il colore distingue bene "non è lavagna", ma non la pelle o una camicia bianca dal gesso: utile solo per rifinire i bordi.
-- Il passo decisivo è **temporale**: su un video sintetico (`tests/test_synthetic.py`) la ricostruzione ha 0% di pixel errati contro il 3,2% di un frame singolo con il docente davanti.
-
-I numeri vengono da un frame in cui la docente è censurata con aree di colore medio: vanno riconfermati su un video reale.
-
-# Struttura
+## Layout
 
 ```
-src/image_segmentation/
-    board.py            quadrilatero della lavagna, omografia, calibrazione JSON
-    person.py           maschera del docente e punto indicato (MediaPipe)
-    reconstruction.py   mediana temporale sulla lavagna rettificata
-    video.py            lettura del video a passo fisso, mediana dei frame
-    main.py             CLI
-notebooks/              esplorazione (01 frame singolo, 02 ricostruzione temporale)
-tests/                  test end-to-end su video sintetico
-scripts/                download dei modelli
-data/                   frame, video, calibrazione (fuori da git)
-models/                 modelli MediaPipe (fuori da git)
-output/                 risultati (fuori da git)
+src/vision_toolkit/
+  core/        video I/O, plane geometry, temporal reconstruction (plain NumPy/OpenCV)
+  tasks/       one interface per domain: segmentation, pose (Protocol + NumPy results)
+  models/      implementations by backend (mediapipe/) + catalog.py: models by name
+  ops/         model-agnostic algorithms on task results: crop_refine, skeleton, pointing
+  usecases/    applications: board/
+  cli.py       `vision-toolkit <command>`
+tests/         mirrors the layers; synthetic data, plus one test on a private frame
+notebooks/     explorations (01 single frame, 02 temporal reconstruction)
+docs/          architecture, migration guide, decisions, one page per use case
+data/          frames, videos, calibration (outside git)
+models/        downloaded model files (outside git)
+output/        results (outside git)
 ```
 
-# Setup
+Each layer imports only the layers below it, and use cases reach models only through the catalog.
+[docs/architecture.md](docs/architecture.md) describes every layer, what belongs there and how to
+change it. `tests/test_layers.py` keeps the import rules true.
+
+## Models
+
+```
+$ vision-toolkit models list
+deeplab-v3             segmentation  mediapipe  ready
+mediapipe-pose-heavy   pose          mediapipe  ready
+selfie-multiclass      segmentation  mediapipe  ready
+```
+
+| Name | Task | Notes |
+|---|---|---|
+| `mediapipe-pose-heavy` | pose | 33 named keypoints and a body mask; two-stage, finds people that are small in the frame |
+| `deeplab-v3` | segmentation | 257×257 input, 21 PASCAL VOC labels; misses small subjects in a full frame, so run it on a crop |
+| `selfie-multiclass` | segmentation | hair, body-skin, face-skin, clothes; made for close-up people |
+
+To add a model:
+1. If the domain is new, add its interface in `tasks/`.
+2. Implement the class in `models/<backend>/`. A new backend also gets its own pip extra.
+3. Add a `ModelSpec` to `models/catalog.py`. An external package can do this through the
+   `vision_toolkit.models` entry point instead.
+4. Use it from a use case by name, e.g. `vision-toolkit board ... --refine-model <name>`.
+
+The details for each kind of change are in [docs/architecture.md](docs/architecture.md#models-and-the-catalog).
+
+## Setup
+
+Windows, Python 3.12, CPU only.
 
 ```
 py -m venv .env
 .env\Scripts\activate
-pip install -e ".[dev]"
-python scripts/download_models.py
+pip install -e ".[dev,mediapipe]"
+vision-toolkit models download     # model files into models/ (or $VISION_TOOLKIT_MODELS)
+pytest -s tests
+jupyter lab                        # from the root, then notebooks/
 ```
 
-Notebook: `jupyter lab` dalla radice, poi `notebooks/`.
-Test: `pytest -s tests` (richiede `data/frame/lezione_prova_cit_censured.png`).
+The core needs only OpenCV and NumPy. Each model backend is a pip extra (`mediapipe` today).
+Without an extra, only the models that need it fail, and the message names the extra to install.
 
-# Uso
+The tests use synthetic data. `tests/usecases/test_board_synthetic.py` also needs a private lecture
+frame (`data/frame/lezione_prova_cit_censured.png`) and is skipped without it. Lecture frames show a
+real person: they are never committed or published.
 
-```
-lavagna data/video/lezione.mp4 --step 1
-```
+## Lessons that generalise
 
-Opzioni principali:
-- `--step`: secondi tra due frame analizzati (default 1)
-- `--crop x,y,w,h`: area del video, se è una registrazione dello schermo con l'interfaccia del player
-- `--quad file.json`: angoli della lavagna fissati a mano
-- `--window`: campioni nella mediana temporale (default 7)
-- `--min-change`: frazione di pixel cambiati per salvare un nuovo snapshot
-- `--refine`: aggiunge DeepLab sul ritaglio alla maschera della posa
+From the first use case, valid beyond the board:
+- Models with a small input (DeepLab V3 at 257×257) lose subjects that are small in the full frame.
+  Crop first (`ops.crop_refine`), or use a two-stage model such as PoseLandmarker.
+- A static background with a moving subject is rebuilt with the temporal median of the uncovered
+  pixels, after bringing them onto a common plane with a homography (`core.temporal.PlaneMedian`).
+- Colour separates a uniform background well, but not light subjects from light strokes: use it to
+  refine, not as the main criterion.
+- Pose keypoints give more than a mask, for example the pointed spot and the arm angle (`ops.pointing`).
 
-Output in `output/<nome-video>/`:
-- `board_<hh>h<mm>m<ss>s.png`: snapshot della lavagna pulita
-- `board_final.png`, `median.png`, `quad.json`
-- `pointing.jsonl`: una riga per frame con il docente in vista
+## Documentation
 
-```json
-{"t": 693.0, "frame_xy": [679, 415], "board_xy": [612, 251], "board_xy_norm": [0.398, 0.762],
- "arm_angle": 94.0, "occluded_fraction": 0.054, "snapshot": "board_00h11m30s.png"}
-```
+- [Architecture](docs/architecture.md): layers, rules, and how to change each layer
+- [Migration guide](docs/migration-guide.md): from `image-segmentation` / `lavagna` to vision-toolkit
+- Decisions: [0001 umbrella toolkit](docs/decisions/0001-umbrella-toolkit.md),
+  [0002 single package](docs/decisions/0002-single-package.md),
+  [0003 model layer](docs/decisions/0003-model-layer.md),
+  [0004 English](docs/decisions/0004-english.md)
+- Use cases: [board without lecturer](docs/usecases/board.md)
 
-`arm_angle` è l'angolo tra braccio e busto: circa 0 a riposo, circa 90 con il braccio teso.
+## Status
 
-# Stato del progetto
-
-Pipeline completa, verificata solo su un frame e su un video sintetico.
-
-Problema noto: sul video sintetico il punto indicato è giusto in 7 frame su 10. In uno la mano esce dal frame; negli altri due PoseLandmarker legge il braccio teso come abbassato, anche su frame quasi identici a uno letto bene. Contromisure da provare sul video reale: modalità VIDEO di MediaPipe (tracking tra frame), indicazione valida solo se persiste per 2 o più campioni.
-
-Prossimi passi:
-- provare su un video reale di una lezione intera
-- ombre del docente sulla lavagna (non sono nella maschera)
-- tarare la soglia degli snapshot e distinguere l'indicare dal gesticolare (angolo e durata della posa)
-- esportare per i riassunti: snapshot + intervalli di trascrizione + zone indicate
-- interrogazione da timestamp: dato un istante (o una frase della trascrizione), restituire snapshot e zona indicata nella finestra (vedi "Dalla trascrizione alla formula")
-- valutare la ritrascrizione con timestamp per parola (Whisper) per stringere la finestra
+- The board use case is complete, verified on one frame and on a synthetic video. It still needs a
+  real lecture video ([status](docs/usecases/board.md#status)).
+- Next: absorb `image-stitching` as the canvas use case.
