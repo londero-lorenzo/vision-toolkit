@@ -1,0 +1,21 @@
+
+# exclude python environment folder
+.env
+**/*.egg-info
+
+# exclude pycache and jupyter files
+**/__pycache__/
+.jupyter_ystore.db
+**/.ipynb_checkpoints
+.pytest_cache
+
+# exclude data (frame e video delle lezioni: contengono il docente), modelli scaricati e output
+data
+models
+output
+
+# exclude images
+*.png
+*.jpg
+*.mp4
+*.pdn
