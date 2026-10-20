@@ -40,20 +40,28 @@ The use case produces:
 4. **Lecturer.** The mask from MediaPipe PoseLandmarker, at confidence 0.1 instead of 0.5. The arms
    are added as segments between the shoulder, elbow, wrist and index keypoints. When the pose finds
    nobody, the mask is the box of the foreground blob shaped like a standing person: tall, and down
-   to the audience line. The foreground is the difference from the segment's median. Optional:
-   DeepLab V3 on the crop around the person (`--refine-model deeplab-v3`).
+   to the audience line. The foreground blobs touching the mask join it: on the real lectures the
+   pose mask misses a sleeve, the side turned away or a shadow for tens of seconds, long enough to
+   enter the board. At the edge of the frame the lecturer is partly out of view, and neither the
+   pose nor the standing shape finds her: for up to 20 s (`--track`), the foreground blobs touching
+   the previous frame's mask are taken for her. The foreground is the difference from the segment's
+   median. Optional: DeepLab V3 on the crop around the person (`--refine-model deeplab-v3`).
    (`usecases/board/person_mask.py`, `ops.skeleton`, `ops.crop_refine`, `core.foreground`)
 5. **Reconstruction.** For every pixel of the rectified board, the median of the last N samples in
    which it was not covered, 21 samples 2 s apart by default. A pixel covered now was visible shortly
-   before or will be shortly after. Each frame is first divided by its exposure gain, measured on the
-   visible board against the segment's median: the camera's exposure drifts by a few percent and
-   jumps between frames. The reference stays fixed on purpose. Against the board being rebuilt the
-   gain drifted: on the 13 October lecture it reached 1.10–1.25, where the board's real gain stays
-   within 0.99–1.05.
+   before or will be shortly after. A pixel changes only once it was seen in a quarter of the window
+   (`--min-seen`), otherwise it keeps its last value: next to a lecturer who stays, a pixel seen in
+   one or two samples would take whatever those showed, a bit of her the mask missed included.
+   Each frame is first divided by its exposure gain, measured on the visible board against the
+   segment's median: the camera's exposure drifts by a few percent and jumps between frames. The
+   reference stays fixed on purpose. Against the board being rebuilt the gain drifted: on the
+   13 October lecture it reached 1.10–1.25, where the board's real gain stays within 0.99–1.05.
    (`core.temporal.PlaneMedian`, `core.foreground.exposure_gain`)
 6. **Snapshots.** A pixel has changed when it moved by more than half the chalk contrast measured on
    the video, between 6 and 25 levels. A snapshot is taken when enough pixels have changed
-   (`--min-change`) and the change has settled. (`usecases/board/chalk.py`)
+   (`--min-change`) and the change has settled, and not before the median holds half a window: from
+   the first two samples, the first snapshots of two lectures had 15–18 thousand pixels never seen.
+   (`usecases/board/chalk.py`)
 7. **Pointed spot.** The index fingertip of the arm raised highest relative to the torso, mapped to
    board coordinates. (`ops.pointing`)
 
@@ -149,6 +157,28 @@ The corners found by `find_board` on the medians of the originals agree within 1
 checked on released frames. Where the pose finds the lecturer, the final mask covers the head disk in
 96–98% of the poses.
 
+### First judgement of the snapshots
+
+Lorenzo then judged the 189 snapshots of the four lectures (L5). None shows a face or a person. 21
+show artefacts: 3, 15, 2 and 1 in the four lectures. They do not spoil the board, though nearby text
+is sometimes readable only in the next snapshot. The samples around them point to four causes:
+
+| Cause | Where | Change |
+|---|---|---|
+| The first snapshot comes from 2 samples, with 15–18 thousand pixels never seen | 8 and 15 October, at 4 s | no snapshot before half a window |
+| The pose mask misses part of the lecturer, 1–6 thousand foreground pixels attached to it, for 20–50 s | 8 October at 37–40 min, 13 October | foreground blobs touching the mask join it |
+| A pixel near a lecturer who stays is seen in one or two samples, a bad one included | 6 October at 40 min | a pixel changes only once seen in a quarter of the window |
+| The lecturer at the edge of the frame, partly out of view: neither the pose nor the standing shape finds her | 8 October at 12 and 24 min | followed through the foreground touching her last mask |
+
+On the new run, every snapshot of the 6 October lecture and all but one of the 8 October one match,
+within 50 pixels, a snapshot Lorenzo approved. None matches a rejected one. 18 snapshots differ from
+both and wait for a second judgement. The frames where nobody is found drop from 12%, 22%, 5% and
+10% to 8%, 7%, 1% and 6%; the lecturer is followed through the foreground in 4–15% of the frames.
+
+The indicator tried first, zones present in one snapshot only, caught 6 of the 19 rejected snapshots
+it could measure and flagged 8 that Lorenzo found clean: a leak that lasts is in several snapshots.
+Lorenzo's judgement stays the measure.
+
 ## Usage
 
 ```
@@ -163,6 +193,7 @@ Main options:
 - `--redact-below`: audience line in the cropped frame (overrides the setup)
 - `--quad file.json`: board corners set by hand
 - `--window`: samples in the temporal median (default 21)
+- `--min-seen`: fraction of the window a board pixel must be seen in to change (default 0.25)
 - `--min-change`: fraction of changed pixels that triggers a new snapshot (default 0.004)
 - `--change-threshold`: levels a pixel must change by to count (default: half the chalk contrast of
   the video, between 6 and 25)
@@ -172,6 +203,8 @@ Main options:
 - `--pose-model`: pose model from the catalog (default `mediapipe-pose-heavy`)
 - `--pose-confidence`: the pose model's `min_confidence` (default 0.1; `none` keeps the model's own)
 - `--no-fallback`: no foreground blob when the pose finds nobody
+- `--no-grow-mask`: keep the mask as it is, without the foreground blobs touching it
+- `--track`: seconds the lecturer is followed through the foreground once lost (default 20; 0 never)
 - `--refine-model`: segmentation model run on the crop around the lecturer, e.g. `deeplab-v3`
   (default none)
 - `--refine-labels`: labels of the refine model that belong to the lecturer (default `person`)
@@ -188,7 +221,8 @@ In `output/<video name>/`:
 - `pointing.jsonl`: one line per analysed frame in which the pose found the lecturer
 - `run.json`: what the run measured and decided. It has the framing segments (start, end, used or
   why skipped, corners), the snapshot threshold and the chalk contrast it came from, how the lecturer
-  was found (pose, foreground, nobody), the exposure gain percentiles and the number of snapshots.
+  was found (pose, foreground, tracking, nobody), the exposure gain percentiles and the number of
+  snapshots.
   The vault does not read it.
 
 ```json
@@ -208,10 +242,10 @@ must be agreed first (see [architecture](../architecture.md#usecases)).
 
 ## Status
 
-The pipeline is complete. It was calibrated blind on four real lectures (see above), and the changes
-the calibration called for are in. Its snapshots of a real lecture have not been judged yet: Lorenzo
-answers «is the lecturer absent?» for each one (L5 in [anonymize](anonymize.md#where-the-person-comes-in)),
-and the answers give the true leak rate.
+The pipeline is complete. It was calibrated blind on four real lectures, and Lorenzo judged its
+snapshots (L5 in [anonymize](anonymize.md#where-the-person-comes-in)): no person, 21 artefacts in
+189, whose causes are corrected (see above). The 18 snapshots of the new run that match none he
+judged wait for his answer.
 
 Known problems:
 - on the synthetic video the pointed spot is right in 7 frames out of 10. In one the hand leaves the
@@ -226,8 +260,7 @@ Countermeasures to try:
   that appears.
 
 Next steps:
-- judge the snapshots of the four lectures (L5) and tune from the leak rate
-- shadows of the lecturer on the board (they are not in the mask)
+- judge the 18 snapshots of the new run that match none already judged
 - export for the summaries: snapshots + transcript intervals + pointed areas
 - query by timestamp: given a moment (or a sentence of the transcript), return the snapshot and the
   pointed area in the window (see "From the transcript to the formula")

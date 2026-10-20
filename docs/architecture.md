@@ -63,7 +63,8 @@ src/vision_toolkit/
     framing.py                camera_motion, framing_segments: stretches of video with one camera framing (ECC)
     geometry.py               order_corners, polygon_mask, rectify_homography, to_plane, save_quad/load_quad
     temporal.py               PlaneMedian: masked per-pixel temporal median on a rectified plane, exposure matched
-    foreground.py             exposure_gain, foreground_mask: a frame against a static background
+    foreground.py             exposure_gain, foreground_mask, blobs_touching: a frame against a static
+                              background
     redact.py                 pixelate, black_out_below
     layout.py                 Setup, load_setup, save_setup: crop and audience line of a recording (setup.json)
     review.py                 ReviewQueue: images waiting for a person's decision, kept as plain files
@@ -90,7 +91,8 @@ src/vision_toolkit/
       detect.py               find_board, detect_board, refine_quad: dark board on a light wall (Otsu + contour),
                               sides moved to the real edge
       person_mask.py          PersonMasker, person_blob: pose mask + arm skeleton + optional refine model
-                              + dilation; a person-shaped foreground blob when the pose finds nobody
+                              + dilation + the foreground blobs touching it; a person-shaped foreground
+                              blob when the pose finds nobody, else the blobs touching the last mask
       chalk.py                stroke_contrast, change_threshold: the snapshot threshold from the chalk
       pipeline.py             BoardOptions, run: framing segments, snapshot policy, pointing.jsonl, run.json
       cli.py                  `vision-toolkit board` options
@@ -144,8 +146,9 @@ temporal reconstruction of a static background on a rectified plane, comparing a
 background, and paths.
 
 **Belongs here:** `iter_frames`, `median_frame`, `framing_segments`, `rectify_homography`, `to_plane`,
-`PlaneMedian`, `exposure_gain`, `foreground_mask`, `pixelate`, `Setup`, `ReviewQueue`. The test is that
-the algorithm needs no model, no task result and no domain assumption. The review queue qualifies: it
+`PlaneMedian`, `exposure_gain`, `foreground_mask`, `blobs_touching`, `pixelate`, `Setup`,
+`ReviewQueue`. The test is that the algorithm needs no model, no task result and no domain
+assumption. The review queue qualifies: it
 is a contract on files, and it knows neither the use cases that fill it nor the app that will work
 through it. So does the recording layout: a crop and a row, confirmed by a person, that two use cases
 read.

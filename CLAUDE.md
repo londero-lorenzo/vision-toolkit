@@ -10,8 +10,9 @@ pluggable, picked by name from a catalog.
 - First use case, implemented: **board without lecturer** (`vision-toolkit board`). From lecture
   videos it removes the lecturer, saves a clean board snapshot at every change and logs the pointed
   spot with its timestamp. Page: `docs/usecases/board.md`. It was calibrated blind on the four real
-  lectures, and the changes the calibration called for are in. Its snapshots still wait for Lorenzo's
-  judgement (L5). Pointing is right in 7 frames out of 10 on the synthetic video.
+  lectures. Lorenzo judged its snapshots (L5): no person, 21 artefacts in 189, whose causes are
+  corrected; 18 snapshots of the new run wait for his answer. Pointing is right in 7 frames out of 10
+  on the synthetic video.
 - Second use case, implemented: **anonymize** (`vision-toolkit anonymize`). It pixelates the faces in
   frames of a video and puts the frames in a review queue for Lorenzo. Page:
   `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on

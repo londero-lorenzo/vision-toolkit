@@ -63,8 +63,9 @@ per doubtful frame. How many doubts a lecture produces will be known after the f
    outline and mean colour remain.
 3. **Doubts** (`doubts.py`). A frame is doubtful when any of these holds:
    - **`person-without-head`:** foreground that no pose with a head explains. The foreground is
-     the difference from the median, after compensating the exposure gain, cleared of thin changes
-     such as chalk strokes (`core.foreground.foreground_mask`, shared with `board`);
+     the difference from the median, after compensating the exposure gain (the median ratio of
+     the pixels, `core.foreground.exposure_gain`), cleared of thin changes such as chalk strokes
+     (`core.foreground.foreground_mask`, shared with `board`);
    - **`face-outside-pose`:** a YuNet face far from every pose's head;
    - **`head-at-edge`:** a head touching the edge of the frame, where keypoints are unreliable.
 4. **Resolving doubts.**

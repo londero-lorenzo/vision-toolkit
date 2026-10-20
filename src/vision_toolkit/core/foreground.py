@@ -30,22 +30,31 @@ def foreground_mask(frame, background, threshold=30, open_fraction=0.006):
     """
     uint8 (0/255) mask of what differs from the background.
 
-    The frame is first divided by its global exposure gain against the background
-    (lecture videos drift by a few percent), then pixels differing by more than
-    `threshold` are kept. An opening of `open_fraction` times the frame width removes
-    chalk strokes and other thin changes, and keeps person-sized ones. Pixels black
-    in the background (a redacted band) never count.
+    The frame is first divided by its exposure gain against the background
+    (exposure_gain; lecture videos drift by a few percent), then pixels differing
+    by more than `threshold` are kept. An opening of `open_fraction` times the frame
+    width removes chalk strokes and other thin changes, and keeps person-sized ones.
+    Pixels black in the background (a redacted band) never count.
     """
     valid = background.max(axis=2) > 10
     if not valid.any():
         return np.zeros(frame.shape[:2], np.uint8)
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)[valid]
-    gray_background = cv2.cvtColor(background, cv2.COLOR_BGR2GRAY)[valid]
-    gain = max(float(np.median(gray_frame)), 1.0) / max(float(np.median(gray_background)), 1.0)
+    gain = exposure_gain(frame, background, valid)
     diff = np.abs(frame.astype(np.float32) / gain - background.astype(np.float32)).max(axis=2)
     mask = ((diff > threshold) & valid).astype(np.uint8) * 255
     k = max(3, int(open_fraction * frame.shape[1]))
     return cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((k, k), np.uint8))
+
+
+def blobs_touching(foreground, mask):
+    """
+    uint8 (0/255) mask of the connected blobs of `foreground` that overlap `mask`:
+    what differs from the background and hangs on to an object already found, such
+    as the sleeve or the shadow of a person that the person mask missed.
+    """
+    _, labels = cv2.connectedComponents((np.asarray(foreground) > 0).astype(np.uint8), connectivity=8)
+    touched = np.unique(labels[(np.asarray(mask) > 0) & (labels > 0)])
+    return (np.isin(labels, touched) * 255).astype(np.uint8)
 
 
 def _gray(image):

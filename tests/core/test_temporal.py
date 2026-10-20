@@ -44,6 +44,23 @@ def test_unseen_pixels_get_unseen_color():
     assert (rec.image()[~rec.seen] == (255, 0, 255)).all()
 
 
+def test_pixel_seen_in_few_frames_keeps_its_value():
+    # The occluder stays at x = 100 and its mask misses one frame there: with one
+    # sample the background takes that frame, with min_samples it keeps the old value
+    background = scene()
+    H, size = rectify_homography(QUAD)
+    empty = np.zeros(background.shape[:2], np.uint8)
+    for min_samples, leaks in ((1, True), (3, False)):
+        rec = PlaneMedian(H, size, window=5, min_samples=min_samples)
+        for _ in range(5):
+            rec.update(background, empty)
+        for missed in (False, False, True, False, False):
+            frame, mask = occlude(background, 100)
+            rec.update(frame, empty if missed else mask)
+        truth = cv2.warpPerspective(background, H, size).astype(np.float32)
+        assert ((np.abs(rec.background - truth).max(axis=2) > 2).mean() > 0.1) == leaks
+
+
 def test_change_since_snapshot():
     background = scene()
     H, size = rectify_homography(QUAD)

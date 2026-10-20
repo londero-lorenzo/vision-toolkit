@@ -65,6 +65,7 @@ def test_board_pipeline_outputs(fake_pose, video, tmp_path):
     snapshots = sorted(n for n in names if n.startswith("board_") and n != "board_final.png")
     assert {"median.png", "quad.json", "board_final.png", "pointing.jsonl", "run.json"} <= names
     assert snapshots and all(re.fullmatch(r"board_\d{2}h\d{2}m\d{2}s\.png", n) for n in snapshots)
+    assert snapshots[0] >= "board_00h00m02s.png", "no snapshot before the median holds half a window (7 // 2)"
     assert snapshots[-1] >= f"board_00h00m{WRITING_FROM:02d}s.png", "the new writing must trigger a snapshot"
 
     np.testing.assert_allclose(load_quad(out / "quad.json"), BOARD_QUAD, atol=3)
@@ -84,7 +85,8 @@ def test_board_pipeline_outputs(fake_pose, video, tmp_path):
 
     summary = json.loads((out / "run.json").read_text(encoding="utf-8"))
     assert [f["used"] for f in summary["framings"]] == [True]
-    assert summary["frames"] == {"analysed": 12, "lecturer_by_pose": 12, "lecturer_by_foreground": 0, "nobody": 0}
+    assert summary["frames"] == {"analysed": 12, "lecturer_by_pose": 12, "lecturer_by_foreground": 0,
+                                 "lecturer_by_tracking": 0, "nobody": 0}
     assert summary["change_threshold"] == 25 and summary["chalk_contrast"] > 100  # bold synthetic chalk
     assert summary["snapshots"] == len(snapshots)
 
@@ -134,6 +136,36 @@ def test_foreground_masks_the_lecturer_when_the_pose_misses(fake_pose, tmp_path)
     assert frames["lecturer_by_foreground"] == 5 and frames["nobody"] == 0
 
 
+def test_lecturer_followed_through_the_foreground_once_lost(fake_pose, tmp_path):
+    # Her legs behind the desk, she is no standing shape; she walks into the pose's
+    # blind spot and stays there for 5 s
+    positions = [100, 500, 100, 500, 420, 340, 300, 300, 300, 300, 300, 500]
+    path = write_video(tmp_path / "lost.mp4", [draw_person(draw_room(), cx, bottom=250) for cx in positions])
+    options = dict(pose_model="blind-pose", redact_below=360, **FAST)
+    lost = run(path, tmp_path / "lost", BoardOptions(track=0, **options))
+    followed = run(path, tmp_path / "followed", BoardOptions(**options))
+    assert board_errors(lost, draw_room()) > 0.02
+    assert board_errors(followed, draw_room()) < 0.01
+    frames = json.loads((followed / "run.json").read_text(encoding="utf-8"))["frames"]
+    assert frames["lecturer_by_tracking"] == 5 and frames["nobody"] == 0
+
+
+def test_pose_mask_grows_over_what_the_pose_missed(fake_pose, tmp_path):
+    # A sleeve the pose model does not see hangs from the body, and stays in front
+    # of the board while the lecturer stands still
+    def frame(cx):
+        room = draw_person(draw_room(), cx)
+        cv2.rectangle(room, (cx - 90, 130), (cx - 30, 170), (200, 60, 60), -1)
+        return room
+
+    path = write_video(tmp_path / "sleeve.mp4", [frame(cx) for cx in STILL])
+    options = dict(pose_model="fake-pose", redact_below=360, **FAST)
+    without = run(path, tmp_path / "without", BoardOptions(grow_mask=False, **options))
+    grown = run(path, tmp_path / "grown", BoardOptions(**options))
+    assert board_errors(without, draw_room()) > 0.01
+    assert board_errors(grown, draw_room()) < 0.002
+
+
 def test_exposure_jump_changes_no_pixel(fake_pose, tmp_path):
     # The camera brightens by 12% halfway, with nothing written on the board. The room
     # is empty at first, so the first snapshot already shows the whole board
@@ -144,7 +176,7 @@ def test_exposure_jump_changes_no_pixel(fake_pose, tmp_path):
     options = dict(pose_model="fake-pose", change_threshold=6, **FAST)
 
     def changed(out):
-        first = cv2.imread(str(out / "board_00h00m01s.png")).astype(np.float32)
+        first = cv2.imread(str(min(out.glob("board_??h??m??s.png")))).astype(np.float32)
         final = cv2.imread(str(out / "board_final.png")).astype(np.float32)
         return float((np.abs(final - first).max(axis=2) > 6).mean())
 

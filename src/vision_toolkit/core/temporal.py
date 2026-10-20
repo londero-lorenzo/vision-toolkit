@@ -11,10 +11,14 @@ class PlaneMedian:
 
     Every frame is warped onto the plane with the homography H; the pixels covered
     by an occluder (for example a person mask) become NaN. The background is the
-    per-pixel median of the last `window` valid samples: a pixel covered for the
-    whole window keeps its last known value. The median also absorbs bits of the
-    occluder that escaped the mask, as long as they stay in the same place for less
-    than half the window.
+    per-pixel median of the last `window` valid samples. The median absorbs bits of
+    the occluder that escaped the mask, as long as they stay in the same place for
+    less than half the valid samples.
+
+    A pixel changes only when it was seen in at least `min_samples` of the window,
+    or when it had never been seen: otherwise it keeps its last known value. Next to
+    an occluder that stays, a pixel seen in one or two frames would take whatever
+    those frames showed, a bit of the occluder the mask missed included.
 
     With an exposure_reference (the plane rectified at the wanted exposure, such as a
     median of the frames), each frame is first divided by its exposure gain against it,
@@ -27,12 +31,13 @@ class PlaneMedian:
     and the same plane is seen through a new homography.
     """
 
-    def __init__(self, H, size, window=7, change_threshold=25, exposure_reference=None):
+    def __init__(self, H, size, window=7, change_threshold=25, exposure_reference=None, min_samples=1):
         self.H = H
         self.size = size  # (width, height)
         self.window = window
         self.change_threshold = change_threshold
         self.exposure_reference = exposure_reference
+        self.min_samples = min_samples
         w, h = size
         self.buffer = np.full((window, h, w, 3), np.nan, np.float32)
         self.index = 0
@@ -59,7 +64,8 @@ class PlaneMedian:
 
         median, count = _nan_median(self.buffer)
         valid = count > 0
-        self.background[valid] = median[valid]
+        changed = valid & ((count >= self.min_samples) | ~self.seen)
+        self.background[changed] = median[changed]
         self.seen |= valid
         return occluded
 

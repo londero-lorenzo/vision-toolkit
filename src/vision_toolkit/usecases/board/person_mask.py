@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from vision_toolkit.core.foreground import foreground_mask
+from vision_toolkit.core.foreground import blobs_touching, foreground_mask
 from vision_toolkit.models import catalog
 from vision_toolkit.ops.crop_refine import segment_on_crop
 from vision_toolkit.ops.pointing import pointing_hand
@@ -13,6 +13,7 @@ from vision_toolkit.tasks.pose import Pose
 DEFAULT_POSE_MODEL = "mediapipe-pose-heavy"
 POSE = "pose"
 FOREGROUND = "foreground"
+TRACKED = "tracked"
 
 
 @dataclass
@@ -21,7 +22,7 @@ class PersonMask:
     pose: Pose | None
     pointer: tuple | None       # (x, y) fingertip of the more raised arm
     arm_angle: float            # degrees between arm and torso: ~0 at rest, ~90 stretched out
-    source: str | None = None   # POSE, FOREGROUND, or None when nobody was found
+    source: str | None = None   # POSE, FOREGROUND, TRACKED, or None when nobody was found
 
 
 class PersonMasker:
@@ -30,21 +31,32 @@ class PersonMasker:
 
     mask = body mask of the pose model + arms drawn as a skeleton
            (+ a segmenter run on the crop around the person, if refine_model is set)
-           + dilation.
+           + dilation
+           (+ the foreground blobs touching it, dilated, if grow and a background is given).
 
     The default pose model (PoseLandmarker) works in two stages, so it finds the
     lecturer in the full frame; a small-input segmenter such as DeepLab V3 does
     not, but it does on the crop. The pose mask sometimes loses a stretch of the
     raised arm: the skeleton covers it, refine_model can add what is left.
 
+    On the real lectures the pose mask also misses whole stretches of the lecturer
+    (a sleeve, the side turned away, a shadow) for tens of seconds, long enough to
+    enter the board. What differs from the background and touches the mask belongs
+    to her: with grow, those foreground blobs join the mask.
+
     When the pose finds nobody and a background is given, the lecturer may still be
     there, seen from the side or in poor light: the mask is then the box of the
-    largest foreground blob shaped like a standing person (person_blob). It has no
-    pose, so no pointed spot.
+    largest foreground blob shaped like a standing person (person_blob), grown in
+    the same way. It has no pose, so no pointed spot.
+
+    At the edge of the frame the lecturer is partly out of view: the pose misses her
+    and what shows of her is no standing shape. Given the previous frame's mask, the
+    foreground blobs that touch it, `track_reach` of the frame width around it, are
+    taken for her.
     """
 
     def __init__(self, pose_model=DEFAULT_POSE_MODEL, refine_model=None, refine_labels=("person",),
-                 dilate=15, models_dir=None, pose_options=None):
+                 dilate=15, models_dir=None, pose_options=None, fallback=True, grow=True, track_reach=0.03):
         self.pose = catalog.create(pose_model, task="pose", directory=models_dir, **(pose_options or {}))
         self.refiner = None
         self.refine_labels = tuple(refine_labels)
@@ -56,6 +68,9 @@ class PersonMasker:
                 raise catalog.CatalogError(f"Model {refine_model!r} has no label(s) {sorted(unknown)}; "
                                            f"its labels are {list(self.refiner.labels)}")
         self.kernel = np.ones((dilate, dilate), np.uint8) if dilate else None
+        self.fallback = fallback
+        self.grow = grow
+        self.track_reach = track_reach
 
     def close(self):
         self.pose.close()
@@ -68,22 +83,33 @@ class PersonMasker:
     def __exit__(self, *exc):
         self.close()
 
-    def __call__(self, frame, background=None, floor=None):
+    def __call__(self, frame, background=None, floor=None, previous=None):
         """
         frame: what the models see, with the audience already blacked out.
-        background: the same view without the lecturer (a median), for the fallback.
+        background: the same view without the lecturer (a median), for the fallback
+        and to grow the pose mask.
         floor: the row where the lecturer's blob ends, the audience line; the frame
         bottom by default.
+        previous: the mask of the frame before, to follow the lecturer through the
+        foreground when neither the pose nor the standing shape finds her.
         """
         mask = np.zeros(frame.shape[:2], np.uint8)
         poses = self.pose(frame)
         if not poses:
-            if background is None:
+            if background is None or not self.fallback:
                 return PersonMask(mask, None, None, 0.0)
-            mask = person_blob(foreground_mask(frame, background), floor)
-            if not mask.any():
-                return PersonMask(mask, None, None, 0.0)
-            return PersonMask(self._dilate(mask), None, None, 0.0, FOREGROUND)
+            foreground = foreground_mask(frame, background)
+            mask = person_blob(foreground, floor)
+            if mask.any():
+                if self.grow:
+                    mask |= blobs_touching(foreground, mask)
+                return PersonMask(self._dilate(mask), None, None, 0.0, FOREGROUND)
+            if previous is not None and previous.any():
+                k = max(3, int(self.track_reach * frame.shape[1]))
+                mask = blobs_touching(foreground, cv2.dilate(previous, np.ones((k, k), np.uint8)))
+                if mask.any():
+                    return PersonMask(self._dilate(mask), None, None, 0.0, TRACKED)
+            return PersonMask(mask, None, None, 0.0)
 
         pose = poses[0]
         if pose.mask is not None:
@@ -92,6 +118,8 @@ class PersonMasker:
         if self.refiner is not None:
             mask |= segment_on_crop(self.refiner, frame, mask, self.refine_labels)
         mask = self._dilate(mask)
+        if background is not None and self.grow:
+            mask |= self._dilate(blobs_touching(foreground_mask(frame, background), mask))
 
         pointing = pointing_hand(pose)
         if pointing is None:

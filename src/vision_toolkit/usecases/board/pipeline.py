@@ -13,7 +13,7 @@ from vision_toolkit.core.redact import black_out_below
 from vision_toolkit.core.temporal import PlaneMedian
 from vision_toolkit.usecases.board.chalk import change_threshold, stroke_contrast
 from vision_toolkit.usecases.board.detect import find_board
-from vision_toolkit.usecases.board.person_mask import DEFAULT_POSE_MODEL, FOREGROUND, POSE, PersonMasker
+from vision_toolkit.usecases.board.person_mask import DEFAULT_POSE_MODEL, FOREGROUND, POSE, TRACKED, PersonMasker
 
 
 class BoardNotFoundError(RuntimeError):
@@ -34,6 +34,7 @@ class BoardOptions:
     setup: Path | None = None               # confirmed setup.json (core.layout) for crop and redact_below
     quad: Path | None = None                # JSON with the 4 board corners; detected when None
     window: int = 21                        # samples in the temporal median
+    min_seen: float = 0.25                  # fraction of the window a board pixel must be seen in to change
     min_change: float = 0.004               # fraction of changed pixels that triggers a new snapshot
     change_threshold: float | None = None   # levels a pixel must change by to count; None measures the chalk
     match_exposure: bool = True             # divide each frame by its exposure gain against the median
@@ -42,6 +43,8 @@ class BoardOptions:
     pose_model: str = DEFAULT_POSE_MODEL
     pose_confidence: float | None = 0.1     # the pose model's min_confidence; None keeps the model's default
     fallback: bool = True                   # a person-shaped foreground blob when the pose finds nobody
+    grow_mask: bool = True                  # add the foreground blobs touching the pose mask
+    track: float = 20.0                     # seconds the lecturer is followed through the foreground once lost
     refine_model: str | None = None
     refine_labels: tuple = ("person",)
     models_dir: Path | None = None
@@ -60,7 +63,8 @@ def run(video, out_dir, options=None):
     Remove the lecturer from the board in a lecture video.
 
     Writes to out_dir/<video name>/:
-    - board_<hh>h<mm>m<ss>s.png: clean board snapshot, every time its content changes
+    - board_<hh>h<mm>m<ss>s.png: clean board snapshot, every time its content changes,
+      from the moment the median holds half a window of frames
     - board_final.png: the board at the end of the video
     - median.png, quad.json: median frame and detected corners (only without options.quad),
       of the longest framing segment
@@ -116,13 +120,14 @@ def run(video, out_dir, options=None):
 
     pose_options = {"min_confidence": options.pose_confidence} if options.pose_confidence is not None else None
     masker = PersonMasker(options.pose_model, options.refine_model, options.refine_labels,
-                          models_dir=options.models_dir, pose_options=pose_options)
+                          models_dir=options.models_dir, pose_options=pose_options,
+                          fallback=options.fallback, grow=options.grow_mask)
 
-    def lecturer(frame, segment):
-        background = segment.background if options.fallback else None
-        return masker(black_out_below(frame, floor), background, floor)
+    def lecturer(frame, segment, previous=None):
+        return masker(black_out_below(frame, floor), segment.background, floor, previous)
 
-    found = {POSE: 0, FOREGROUND: 0, "none": 0}
+    found = {POSE: 0, FOREGROUND: 0, TRACKED: 0, "none": 0}
+    max_tracked = int(options.track / options.step)
     gains, snapshots = [], 0
     with masker:
         threshold, contrast = options.change_threshold, None
@@ -131,7 +136,9 @@ def run(video, out_dir, options=None):
             threshold = change_threshold(contrasts)
             measured = [c for c in contrasts if c is not None]
             contrast = round(float(np.median(measured)), 1) if measured else None
-        board = PlaneMedian(main.H, size, window=options.window, change_threshold=threshold)
+        board = PlaneMedian(main.H, size, window=options.window, change_threshold=threshold,
+                            min_samples=max(1, round(options.min_seen * options.window)))
+        warmup = options.window // 2  # a median of the first few frames shows whatever they missed
         prev_change = None
 
         with open(out / "pointing.jsonl", "w", encoding="utf-8") as log:
@@ -140,15 +147,18 @@ def run(video, out_dir, options=None):
                 board.H = segment.H
                 if options.match_exposure:
                     board.exposure_reference = cv2.warpPerspective(segment.background, segment.H, size)
+                previous, tracked = None, 0
                 for t, frame in iter_frames(video, options.step, segment.framing.start, segment.framing.end, crop):
-                    person = lecturer(frame, segment)
+                    person = lecturer(frame, segment, previous if tracked < max_tracked else None)
                     found[person.source or "none"] += 1
+                    tracked = tracked + 1 if person.source == TRACKED else 0
+                    previous = person.mask if person.source else None
                     occluded = board.update(frame, person.mask)
                     gains.append(board.gain)
 
                     # Snapshot when the board has changed enough and has settled
                     change = board.change_since_snapshot()
-                    if (change >= options.min_change and prev_change is not None
+                    if (board.index >= warmup and change >= options.min_change and prev_change is not None
                             and abs(change - prev_change) < options.min_change / 4):
                         snapshot = f"board_{format_time(t)}.png"
                         cv2.imwrite(str(out / snapshot), board.take_snapshot())
@@ -174,7 +184,8 @@ def run(video, out_dir, options=None):
         "change_threshold": round(float(threshold), 1),
         "chalk_contrast": contrast,
         "frames": {"analysed": sum(found.values()), "lecturer_by_pose": found[POSE],
-                   "lecturer_by_foreground": found[FOREGROUND], "nobody": found["none"]},
+                   "lecturer_by_foreground": found[FOREGROUND], "lecturer_by_tracking": found[TRACKED],
+                   "nobody": found["none"]},
         "exposure_gain": {f"p{p}": round(float(np.percentile(gains, p)), 3) for p in (5, 50, 95)} if gains else None,
         "snapshots": snapshots,
     }

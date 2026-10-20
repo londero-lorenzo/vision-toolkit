@@ -24,6 +24,9 @@ def add_cli(subparsers):
                         "model sees the frame (overrides the setup)")
     p.add_argument("--quad", type=Path, default=None, help="JSON with the 4 board corners (skips detection)")
     p.add_argument("--window", type=int, default=21, help="samples in the temporal median")
+    p.add_argument("--min-seen", type=float, default=0.25,
+                   help="fraction of the window a board pixel must be seen in to change; below it, the pixel "
+                        "keeps its last value")
     p.add_argument("--min-change", type=float, default=0.004,
                    help="fraction of changed pixels that triggers a new snapshot")
     p.add_argument("--change-threshold", type=float, default=None,
@@ -41,6 +44,11 @@ def add_cli(subparsers):
                    help="min_confidence passed to the pose model, or none for the model's default")
     p.add_argument("--fallback", action=argparse.BooleanOptionalAction, default=True,
                    help="when the pose finds nobody, mask the foreground blob shaped like a standing person")
+    p.add_argument("--grow-mask", action=argparse.BooleanOptionalAction, default=True,
+                   help="add to the pose mask the foreground blobs that touch it (a sleeve, a shadow)")
+    p.add_argument("--track", type=float, default=20.0,
+                   help="seconds the lecturer is followed through the foreground touching her last mask, when "
+                        "neither the pose nor the standing shape finds her (0: never)")
     p.add_argument("--refine-model", default=None,
                    help="segmentation model run on the crop around the lecturer and merged into the mask, "
                         "e.g. deeplab-v3")
@@ -60,10 +68,11 @@ def none_or_float(value):
 def main(args):
     options = BoardOptions(
         step=args.step, start=args.start, end=args.end, crop=args.crop, redact_below=args.redact_below,
-        setup=args.setup, quad=args.quad, window=args.window, min_change=args.min_change,
+        setup=args.setup, quad=args.quad, window=args.window, min_seen=args.min_seen, min_change=args.min_change,
         change_threshold=args.change_threshold, match_exposure=args.match_exposure,
         framing_step=args.framing_step, min_segment=args.min_segment, pose_model=args.pose_model,
-        pose_confidence=args.pose_confidence, fallback=args.fallback, refine_model=args.refine_model,
+        pose_confidence=args.pose_confidence, fallback=args.fallback, grow_mask=args.grow_mask, track=args.track,
+        refine_model=args.refine_model,
         refine_labels=args.refine_labels,
     )
     try:
@@ -80,4 +89,5 @@ def main(args):
     if frames["analysed"]:
         share = {k: round(100 * v / frames["analysed"]) for k, v in frames.items() if k != "analysed"}
         print(f"lecturer found by pose in {share['lecturer_by_pose']}% of the frames, "
-              f"by foreground in {share['lecturer_by_foreground']}%, nobody in {share['nobody']}%")
+              f"by foreground in {share['lecturer_by_foreground']}%, by tracking in {share['lecturer_by_tracking']}%, "
+              f"nobody in {share['nobody']}%")
