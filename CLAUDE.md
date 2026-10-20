@@ -11,6 +11,10 @@ pluggable, picked by name from a catalog.
   videos it removes the lecturer, saves a clean board snapshot at every change and logs the pointed
   spot with its timestamp. Page: `docs/usecases/board.md`. It still needs a real lecture video, and
   pointing is right in 7 frames out of 10 on the synthetic video.
+- Second use case, implemented: **anonymize** (`vision-toolkit anonymize`). It pixelates the faces in
+  frames of a video and puts the frames in a review queue for Lorenzo. Page:
+  `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has not run
+  on the four real lectures yet, and its doubt thresholds are tuned after the first one.
 - Next step: absorb `D:\Programmazione\Projects\image-stitching` as the `canvas` use case. Where it
   lands (a registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is
   in `docs/architecture.md`.
@@ -19,12 +23,13 @@ pluggable, picked by name from a catalog.
 
 ```
 src/vision_toolkit/
-  core/       video I/O, plane geometry, temporal reconstruction (imports nothing internal)
-  tasks/      interfaces per domain: Protocol + NumPy results (segmentation, pose)
-  models/     implementations by backend (mediapipe/) + catalog.py (models by name, downloads)
-  ops/        model-agnostic algorithms on task results (crop_refine, skeleton, pointing)
-  usecases/   board/ (detect, person_mask, pipeline, cli)
-  cli.py      `vision-toolkit models|board`
+  core/       video I/O, plane geometry, temporal reconstruction, redaction, review queue
+              (imports nothing internal)
+  tasks/      interfaces per domain: Protocol + NumPy results (segmentation, pose, detection)
+  models/     implementations by backend (mediapipe/, opencv/) + catalog.py (models by name, downloads)
+  ops/        model-agnostic algorithms on task results (crop_refine, skeleton, pointing, faces)
+  usecases/   board/ (detect, person_mask, pipeline, cli), anonymize/ (doubts, pipeline, cli)
+  cli.py      `vision-toolkit models|review|board|anonymize`
 ```
 
 `docs/architecture.md` is the reference. It covers the layer rules, what belongs in each layer and
@@ -42,6 +47,10 @@ pins it. Any change must be agreed with Lorenzo first.
 
 - `data/`, `models/` and `output/`, as well as images and videos, are outside git (`.gitignore`).
   Lecture frames show a real person: they are never committed, published or attached to issues and PRs.
+- Claude processes the lecture videos but never opens them. It looks only at images in the `approved/`
+  folder of a review queue, released by Lorenzo, and at images with no person by construction (binary
+  masks, skeletons on black). To see the median, a snapshot or `setup.png`, Claude first puts it in a
+  queue with `vision-toolkit review add` (`docs/usecases/anonymize.md`, privacy protocol).
 - Notebooks are committed **without output**.
 - Public tests and examples use synthetic data (`tests/fakes.py`).
 - `tests/usecases/test_board_synthetic.py` needs `data/frame/lezione_prova_cit_censured.png` and is

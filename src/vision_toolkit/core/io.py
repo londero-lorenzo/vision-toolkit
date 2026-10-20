@@ -36,6 +36,67 @@ def apply_crop(frame, crop):
     return frame[y:y + h, x:x + w]
 
 
+class FrameReader:
+    """
+    Random access to the frames of a video by time, for code that jumps back and
+    forth (iter_frames walks forward only). A context manager.
+    """
+
+    def __init__(self, path, crop=None):
+        self._cap = _open(path)
+        self.crop = crop
+        self.duration = self._cap.get(cv2.CAP_PROP_FRAME_COUNT) / (self._cap.get(cv2.CAP_PROP_FPS) or 25)
+
+    def at(self, t):
+        """The frame at `t` seconds, cropped; None outside the video or if it cannot be read."""
+        if not 0 <= t < self.duration:
+            return None
+        self._cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+        ok, frame = self._cap.read()
+        return apply_crop(frame, self.crop) if ok else None
+
+    def close(self):
+        self._cap.release()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def content_box(frame, threshold=16):
+    """
+    (x, y, w, h) of the area that is not black, ready for `crop`: the video inside a
+    screen recording, whose player draws black bars around it.
+
+    A row or column is content when more than half of its pixels are brighter than
+    `threshold`. The box spans the longest run of content rows, then the longest run
+    of content columns within them, so thin controls and labels drawn on the bars
+    (a progress bar, a name) stay out. None if the frame is all black.
+    """
+    bright = (frame if frame.ndim == 2 else frame.max(axis=2)) > threshold
+    rows = _longest_run(bright.mean(axis=1) > 0.5)
+    if rows is None:
+        return None
+    y0, y1 = rows
+    x0, x1 = _longest_run(bright[y0:y1].mean(axis=0) > 0.5)
+    return int(x0), int(y0), int(x1 - x0), int(y1 - y0)
+
+
+def _longest_run(flags):
+    """(start, stop) of the longest run of True values, None if there is none."""
+    best, start = None, None
+    for i, flag in enumerate(np.append(flags, False)):
+        if flag and start is None:
+            start = i
+        elif not flag and start is not None:
+            if best is None or i - start > best[1] - best[0]:
+                best = (start, i)
+            start = None
+    return best
+
+
 def median_frame(path, samples=30, crop=None):
     """
     Temporal median of `samples` frames spread over the whole video.

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pytest
 
-from vision_toolkit.core.io import apply_crop, format_time, iter_frames, median_frame
+from vision_toolkit.core.io import FrameReader, apply_crop, content_box, format_time, iter_frames, median_frame
 
 
 @pytest.fixture
@@ -46,3 +46,21 @@ def test_apply_crop_and_format_time():
     assert format_time(0) == "00h00m00s"
     assert format_time(693.7) == "00h11m33s"
     assert format_time(3725) == "01h02m05s"
+
+
+def test_frame_reader_jumps_back_and_forth(video):
+    with FrameReader(video, crop=(0, 20, 64, 32)) as reader:
+        assert reader.duration == pytest.approx(4.0)
+        late, early = reader.at(3.0), reader.at(0.0)
+        assert late.shape == early.shape == (32, 64, 3)
+        assert early.max() > 200 and late.max() < 200  # the white square starts at the left
+        assert reader.at(4.0) is None and reader.at(-1.0) is None
+
+
+def test_content_box_leaves_the_player_bars_out():
+    frame = np.zeros((120, 200, 3), np.uint8)
+    frame[10:90, 5:170] = 120       # the video
+    frame[100:102, 2:198] = 200     # a progress bar across the whole width
+    frame[108:116, 4:40] = 230      # a name label
+    assert content_box(frame) == (5, 10, 165, 80)
+    assert content_box(np.zeros((10, 10, 3), np.uint8)) is None

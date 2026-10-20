@@ -16,9 +16,9 @@ map below. If a rule has to change, update this document first, then the test.
 cli         vision-toolkit <command>: argument parsing, error messages
  │
  ▼
-usecases    board/ (later canvas/): pick models by name, compose ops and core, write outputs
+usecases    board/, anonymize/ (later canvas/): pick models by name, compose ops and core, write outputs
  │    │
- │    └───► models/catalog.py ┄┄ lazy import ┄┄► models/<backend>/   mediapipe/ (later onnx/, torch/)
+ │    └───► models/catalog.py ┄┄ lazy import ┄┄► models/<backend>/   mediapipe/, opencv/ (later onnx/, torch/)
  ▼                                                     │
 ops         model-agnostic algorithms on task results  │ implement
  │                                                     │
@@ -26,7 +26,8 @@ ops         model-agnostic algorithms on task results  │ implement
 tasks       interfaces: Protocol + NumPy results ◄─────┘
  │
  ▼
-core        foundations on plain arrays: video I/O, plane geometry, temporal reconstruction, paths
+core        foundations on plain arrays: video I/O, plane geometry, temporal reconstruction, redaction,
+            review queues, paths
             (every layer may import core; core imports nothing internal)
 ```
 
@@ -45,7 +46,8 @@ Dependency rules (arrows point only downward):
 Two more rules:
 - Backend libraries (`mediapipe`, `onnxruntime`, `torch`, ...) are imported only inside `models/<backend>/`.
   The package therefore imports and runs without any backend installed. Only the models that need a
-  missing backend fail, with a message naming the pip extra.
+  missing backend fail, with a message naming the pip extra. OpenCV is a core dependency: any layer
+  may import `cv2`, and `models/opencv/` needs no extra.
 - Use cases do not import each other. Code that two use cases need moves down, to `ops` or `core`.
 
 ## Module map
@@ -53,32 +55,43 @@ Two more rules:
 ```
 src/vision_toolkit/
   __init__.py                 __version__
-  cli.py                      `vision-toolkit`: `models list|download`, then one subcommand per use case
+  cli.py                      `vision-toolkit`: `models list|download`, `review add|status`, then one
+                              subcommand per use case
   core/
     paths.py                  models_dir(): repo models/ or $VISION_TOOLKIT_MODELS
-    io.py                     iter_frames, apply_crop, median_frame, format_time
+    io.py                     iter_frames, FrameReader, apply_crop, content_box, median_frame, format_time
     geometry.py               order_corners, polygon_mask, rectify_homography, to_plane, save_quad/load_quad
     temporal.py               PlaneMedian: masked per-pixel temporal median on a rectified plane
+    redact.py                 pixelate: masked pixels replaced by the mean of their block
+    review.py                 ReviewQueue: images waiting for a person's decision, kept as plain files
   tasks/
     base.py                   Model: context-manager base class for implementations
     segmentation.py           Segmenter (Protocol), Segmentation (category mask, labels, confidence)
     pose.py                   PoseEstimator (Protocol), Pose (named keypoints + mask), Keypoint
+    detection.py              Detector (Protocol), Detection (box, score, label, named keypoints)
   models/
     catalog.py                ModelSpec, BUILTIN, register, get, available, create, download, entry points
     mediapipe/
       _common.py              base_options, to_mp_image, read_mask (the only numpy_view() reader)
       image_segmenter.py      ImageSegmenter: any MediaPipe segmenter (deeplab-v3, selfie-multiclass)
       pose_landmarker.py      PoseLandmarker: 33 named keypoints + body mask (mediapipe-pose-heavy)
+    opencv/
+      face_detector.py        YuNetFaceDetector: faces with five named keypoints (yunet-face)
   ops/
     crop_refine.py            bounding_box, segment_on_crop: run any Segmenter on a crop, paste back
     skeleton.py               ARMS, shoulder_width, draw_limbs: limbs between named keypoints onto a mask
     pointing.py               Pointing, arm_angle, pointing_hand: the more raised arm and its fingertip
+    faces.py                  HEAD_KEYPOINTS, head_width, head_box, face_mask: heads of poses and face detections
   usecases/
     board/
       detect.py               detect_board: dark board on a light wall (Otsu + contour)
       person_mask.py          PersonMasker: pose mask + arm skeleton + optional refine model + dilation
       pipeline.py             BoardOptions, run: snapshot policy, pointing.jsonl, board_final.png
       cli.py                  `vision-toolkit board` options
+    anonymize/
+      doubts.py               foreground_mask, unexplained_blobs, episodes, select: which frames need a person
+      pipeline.py             AnonymizeOptions, Setup, run: setup, pixelated faces, review queue, manifest.jsonl
+      cli.py                  `vision-toolkit anonymize` options
 ```
 
 Outside `src/`: `tests/` mirrors the layers (`tests/core`, `tests/models`, `tests/ops`,
@@ -123,8 +136,10 @@ missing files (`vision-toolkit models download <name>`) or missing backend (`pip
 from a video, plane geometry (quadrilaterals, homographies), the temporal reconstruction of a static
 background on a rectified plane, and paths.
 
-**Belongs here:** `iter_frames`, `median_frame`, `rectify_homography`, `to_plane`, `PlaneMedian`.
-The test is that the algorithm needs no model, no task result and no domain assumption.
+**Belongs here:** `iter_frames`, `median_frame`, `rectify_homography`, `to_plane`, `PlaneMedian`,
+`pixelate`, `ReviewQueue`. The test is that the algorithm needs no model, no task result and no domain
+assumption. The review queue qualifies: it is a contract on files, and it knows neither the use cases
+that fill it nor the app that will work through it.
 
 **Does not belong here:**
 - domain assumptions such as "a dark board on a light wall" (`detect_board` lives in `usecases/board/`);
@@ -148,6 +163,7 @@ dataclasses in plain NumPy. Thanks to it, models and ops evolve independently.
 **Belongs here:**
 - `Segmenter` / `Segmentation` (with `mask_of`, `confidence_of`);
 - `PoseEstimator` / `Pose` / `Keypoint`;
+- `Detector` / `Detection`, whose keypoints use the names of `tasks.pose`;
 - the `Model` base class;
 - small helpers on results.
 
@@ -238,6 +254,11 @@ not arm length, tells pointing from resting" (`pointing_hand`).
 - `pipeline.py`: the snapshot policy and the `pointing.jsonl` format;
 - `cli.py`.
 
+And in `anonymize/`:
+- `doubts.py`: the policy that decides which frames a person must see;
+- `pipeline.py`: the setup, the queue groups and the `manifest.jsonl` format;
+- `cli.py`.
+
 **Does not belong here:** code another use case would need (move it down) and backend imports.
 
 **May import:** `core`, `tasks`, `ops`, `models.catalog`.
@@ -257,19 +278,23 @@ into a one-line message. No logic of its own.
 | Change | How | Blast radius |
 |---|---|---|
 | New use-case command | the use case's `add_cli`, appended to `USECASES` | local |
-| New toolkit command (like `models`) | an `add_<name>_cli` function in `cli.py` | local |
+| New toolkit command (like `models`, `review`) | an `add_<name>_cli` function in `cli.py` | local |
 | Use cases from other packages | add an entry-point group (as pdf-toolkit does for its modules) when an external package needs it | `cli.py` only |
 
 ## Where future work lands
 
 - **Stitching (step 2, from `image-stitching`).** Registration is a new domain:
   - `tasks/registration.py`: a `Registrar` that takes an image pair and returns a homography with its matches;
-  - `models/opencv/`: SIFT or ORB with the Lowe ratio and RANSAC as models of that task. OpenCV is a
-    core dependency, so this backend needs no extra;
+  - `models/opencv/`, which already holds YuNet: SIFT or ORB with the Lowe ratio and RANSAC as models
+    of that task;
   - warping and compositing on a canvas in `core/geometry.py` (plain arrays) or `ops/` (if they use
     the registration result);
   - `usecases/canvas/` with `vision-toolkit canvas`.
-- **New domains** (detection, depth, OCR, tracking): a task module plus a model, as in the table above.
+- **New domains** (depth, OCR, tracking; detection arrived with `anonymize`): a task module plus a
+  model, as in the table above.
+- **Graphical app.** Its skeleton is designed separately. Its review section reads and writes only
+  the `core.review` contract, so it works for every queue without importing a use case
+  ([anonymize](usecases/anonymize.md#the-review-section-of-the-app)).
 - **Pose tracking between frames** (MediaPipe VIDEO mode, against the 7/10 pointing): an option of
   `PoseLandmarker`, or a smoothing op on a sequence of `Pose`, so it works for any pose model.
 
@@ -298,3 +323,4 @@ Because use cases reach models only by name, the split is a move of files, not a
 - [0002](decisions/0002-single-package.md): one distribution with subpackages, workspace later
 - [0003](decisions/0003-model-layer.md): tasks, models, catalog and ops
 - [0004](decisions/0004-english.md): English everywhere
+- [0005](decisions/0005-anonymized-frames.md): frames leave the machine only through a person's review

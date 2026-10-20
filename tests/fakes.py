@@ -6,10 +6,13 @@ import cv2
 import numpy as np
 
 from vision_toolkit.tasks.base import Model
+from vision_toolkit.tasks.detection import Detection
 from vision_toolkit.tasks.pose import Keypoint, Pose
 from vision_toolkit.tasks.segmentation import Segmentation
 
 PERSON_BGR = (0, 140, 255)  # orange: appears nowhere else in the synthetic scenes
+SKIN_BGR = (120, 160, 220)  # the skin of the synthetic faces: appears nowhere else either
+FACE_RADIUS = 18
 
 
 class ColorPose(Model):
@@ -46,6 +49,71 @@ class ColorPose(Model):
         return [Pose({name: Keypoint(float(x), float(y)) for name, (x, y) in kp.items()}, mask)]
 
 
+class HeadColorPose(ColorPose):
+    """
+    ColorPose with a head: the face keypoints of head_keypoints, on the face that
+    draw_face puts just above the body (FACE_RADIUS + 2 px above its top).
+    """
+
+    keypoint_names = ColorPose.keypoint_names + ("nose", "left_eye_inner", "left_eye", "left_eye_outer",
+                                                 "right_eye_inner", "right_eye", "right_eye_outer", "left_ear",
+                                                 "right_ear", "mouth_left", "mouth_right")
+
+    def __init__(self, tolerance=60, num_poses=1):
+        super().__init__(tolerance)
+        self.num_poses = num_poses
+
+    def __call__(self, image):
+        poses = super().__call__(image)
+        for pose in poses:
+            cx = (pose["left_shoulder"].x + pose["right_shoulder"].x) / 2
+            top = pose["left_shoulder"].y - 26
+            pose.keypoints.update(head_keypoints(cx, top - FACE_RADIUS - 2))
+        return poses
+
+
+def head_keypoints(cx, cy):
+    """Face keypoints of a person looking at the camera, face centred on (cx, cy): ears 34 px apart."""
+    points = {
+        "nose": (0, 2), "left_eye_inner": (4, -5), "left_eye": (7, -5), "left_eye_outer": (10, -5),
+        "right_eye_inner": (-4, -5), "right_eye": (-7, -5), "right_eye_outer": (-10, -5),
+        "left_ear": (17, -2), "right_ear": (-17, -2), "mouth_left": (6, 9), "mouth_right": (-6, 9),
+    }
+    return {name: Keypoint(float(cx + dx), float(cy + dy)) for name, (dx, dy) in points.items()}
+
+
+class SkinSegmenter(Model):
+    """Segmenter that labels "face-skin" the pixels close to SKIN_BGR."""
+
+    labels = ("background", "face-skin")
+
+    def __init__(self, tolerance=40):
+        self.tolerance = tolerance
+
+    def __call__(self, image):
+        diff = np.abs(image.astype(np.int16) - np.int16(SKIN_BGR)).max(axis=2)
+        return Segmentation((diff < self.tolerance).astype(np.uint8), self.labels)
+
+
+class FakeFaceDetector(Model):
+    """Detector that always finds faces in the given boxes, with keypoints placed as on a frontal face."""
+
+    labels = ("face",)
+
+    def __init__(self, boxes=()):
+        self.boxes = [tuple(box) for box in boxes]
+
+    def __call__(self, image):
+        detections = []
+        for x0, y0, x1, y1 in self.boxes:
+            w, h = x1 - x0, y1 - y0
+            points = {"right_eye": (0.3, 0.4), "left_eye": (0.7, 0.4), "nose": (0.5, 0.6),
+                      "mouth_right": (0.35, 0.8), "mouth_left": (0.65, 0.8)}
+            keypoints = {name: Keypoint(x0 + fx * w, y0 + fy * h) for name, (fx, fy) in points.items()}
+            detections.append(Detection((x0, y0, x1, y1), 0.9, "face", keypoints))
+        return detections
+
+
 class SmallInputSegmenter(Model):
     """
     Segmenter with a tiny input, like DeepLab V3 at 257x257 but worse: the image is
@@ -70,6 +138,16 @@ def draw_person(image, cx, top=120, bottom=380, half_width=30, arm_length=100):
     """Orange body from top to bottom, centred on cx, with the right arm stretched out."""
     cv2.rectangle(image, (cx - half_width, top), (cx + half_width, bottom), PERSON_BGR, -1)
     cv2.rectangle(image, (cx + half_width, top + 20), (cx + half_width + arm_length, top + 32), PERSON_BGR, -1)
+    return image
+
+
+def draw_face(image, cx, cy, radius=FACE_RADIUS, cell=4):
+    """Skin-coloured face centred on (cx, cy), with a black and white checkerboard for its features."""
+    cv2.circle(image, (cx, cy), radius, SKIN_BGR, -1)
+    for y in range(cy - 10, cy + 10, cell):
+        for x in range(cx - 10, cx + 10, cell):
+            colour = 255 if ((x - cx) // cell + (y - cy) // cell) % 2 else 0
+            image[y:y + cell, x:x + cell] = colour
     return image
 
 

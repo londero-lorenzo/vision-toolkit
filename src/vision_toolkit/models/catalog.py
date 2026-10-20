@@ -18,6 +18,7 @@ from vision_toolkit.core.paths import models_dir
 
 ENTRY_POINT_GROUP = "vision_toolkit.models"
 MEDIAPIPE_MODELS = "https://storage.googleapis.com/mediapipe-models"
+OPENCV_ZOO = "https://github.com/opencv/opencv_zoo/raw/main/models"
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,16 @@ BUILTIN = (
         extra="mediapipe",
         description="MediaPipe selfie multiclass, 256x256: background, hair, body-skin, "
                     "face-skin, clothes, others. Made for close-up people.",
+    ),
+    ModelSpec(
+        name="yunet-face",
+        task="detection",
+        backend="opencv",
+        factory="vision_toolkit.models.opencv.face_detector:YuNetFaceDetector",
+        files={"face_detection_yunet_2023mar.onnx":
+               f"{OPENCV_ZOO}/face_detection_yunet/face_detection_yunet_2023mar.onnx"},
+        description="OpenCV YuNet face detector: a box and five keypoints per face, faces down to "
+                    "about 10 px. Runs on OpenCV itself, no extra needed.",
     ),
 )
 

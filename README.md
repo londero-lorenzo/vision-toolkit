@@ -10,17 +10,18 @@ a model for a new domain, does not change the code that uses it.
 | Use case | Command | What it does | Docs |
 |---|---|---|---|
 | Board without lecturer | `vision-toolkit board` | removes the lecturer from lecture videos, saves a clean snapshot of the board at every change and logs the pointed spot with its timestamp | [docs/usecases/board.md](docs/usecases/board.md) |
+| Anonymize | `vision-toolkit anonymize` | pixelates the faces in frames of a video and puts the frames in a review queue, where a person approves, fixes or rejects each one before release | [docs/usecases/anonymize.md](docs/usecases/anonymize.md) |
 | Canvas stitching | `vision-toolkit canvas` (planned) | merges overlapping exports of a canvas, absorbed from `image-stitching` | [architecture](docs/architecture.md#where-future-work-lands) |
 
 ## Layout
 
 ```
 src/vision_toolkit/
-  core/        video I/O, plane geometry, temporal reconstruction (plain NumPy/OpenCV)
-  tasks/       one interface per domain: segmentation, pose (Protocol + NumPy results)
-  models/      implementations by backend (mediapipe/) + catalog.py: models by name
-  ops/         model-agnostic algorithms on task results: crop_refine, skeleton, pointing
-  usecases/    applications: board/
+  core/        video I/O, plane geometry, temporal reconstruction, redaction, review queues (plain NumPy/OpenCV)
+  tasks/       one interface per domain: segmentation, pose, detection (Protocol + NumPy results)
+  models/      implementations by backend (mediapipe/, opencv/) + catalog.py: models by name
+  ops/         model-agnostic algorithms on task results: crop_refine, skeleton, pointing, faces
+  usecases/    applications: board/, anonymize/
   cli.py       `vision-toolkit <command>`
 tests/         mirrors the layers; synthetic data, plus one test on a private frame
 notebooks/     explorations (01 single frame, 02 temporal reconstruction)
@@ -41,6 +42,7 @@ $ vision-toolkit models list
 deeplab-v3             segmentation  mediapipe  ready
 mediapipe-pose-heavy   pose          mediapipe  ready
 selfie-multiclass      segmentation  mediapipe  ready
+yunet-face             detection     opencv     ready
 ```
 
 | Name | Task | Notes |
@@ -48,6 +50,7 @@ selfie-multiclass      segmentation  mediapipe  ready
 | `mediapipe-pose-heavy` | pose | 33 named keypoints and a body mask; two-stage, finds people that are small in the frame |
 | `deeplab-v3` | segmentation | 257×257 input, 21 PASCAL VOC labels; misses small subjects in a full frame, so run it on a crop |
 | `selfie-multiclass` | segmentation | hair, body-skin, face-skin, clothes; made for close-up people |
+| `yunet-face` | detection | OpenCV YuNet: faces down to about 10 px with five keypoints; runs on OpenCV, no extra |
 
 To add a model:
 1. If the domain is new, add its interface in `tasks/`.
@@ -96,11 +99,14 @@ From the first use case, valid beyond the board:
 - Decisions: [0001 umbrella toolkit](docs/decisions/0001-umbrella-toolkit.md),
   [0002 single package](docs/decisions/0002-single-package.md),
   [0003 model layer](docs/decisions/0003-model-layer.md),
-  [0004 English](docs/decisions/0004-english.md)
-- Use cases: [board without lecturer](docs/usecases/board.md)
+  [0004 English](docs/decisions/0004-english.md),
+  [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md)
+- Use cases: [board without lecturer](docs/usecases/board.md), [anonymize](docs/usecases/anonymize.md)
 
 ## Status
 
 - The board use case is complete, verified on one frame and on a synthetic video. It still needs a
   real lecture video ([status](docs/usecases/board.md#status)).
+- The anonymize use case prepares that test: frames of the real lectures reach Claude only after
+  Lorenzo's review ([status](docs/usecases/anonymize.md#status)).
 - Next: absorb `image-stitching` as the canvas use case.

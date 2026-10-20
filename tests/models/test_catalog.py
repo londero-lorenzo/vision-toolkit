@@ -30,14 +30,15 @@ def test_builtin_specs_are_consistent():
         module, _, attr = spec.factory.partition(":")
         assert module.startswith(f"vision_toolkit.models.{spec.backend}.") and attr, spec.name
         assert (ROOT / "src" / Path(*module.split("."))).with_suffix(".py").exists(), spec.name
-        assert spec.task in {"segmentation", "pose"}, spec.name
+        assert spec.task in {"segmentation", "pose", "detection"}, spec.name
         assert spec.files and all(url.startswith("https://") for url in spec.files.values()), spec.name
-        assert spec.extra in extras, spec.name
+        assert spec.extra in extras or (spec.backend == "opencv" and spec.extra is None), spec.name
 
 
 def test_available_filters_by_task():
     assert {s.name for s in catalog.available("pose")} >= {"mediapipe-pose-heavy"}
     assert {s.name for s in catalog.available("segmentation")} >= {"deeplab-v3", "selfie-multiclass"}
+    assert {s.name for s in catalog.available("detection")} >= {"yunet-face"}
     assert all(s.task == "pose" for s in catalog.available("pose"))
 
 
