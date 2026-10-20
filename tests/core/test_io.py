@@ -34,6 +34,16 @@ def test_median_frame_removes_moving_object(video):
     assert np.abs(median.astype(int) - 100).max() < 15
 
 
+def test_median_frame_of_a_stretch(tmp_path):
+    path = tmp_path / "two_halves.mp4"
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 5, (64, 48))
+    for i in range(20):
+        writer.write(np.full((48, 64, 3), 60 if i < 10 else 200, np.uint8))
+    writer.release()
+    assert abs(int(median_frame(path, samples=5, end=2.0).mean()) - 60) < 5
+    assert abs(int(median_frame(path, samples=5, start=2.0).mean()) - 200) < 5
+
+
 def test_missing_video_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         next(iter_frames(tmp_path / "missing.mp4"))

@@ -46,3 +46,9 @@ def test_pose_contract():
         assert len(model.keypoint_names) == 33
         assert {"left_shoulder", "left_index", "right_hip"} <= set(model.keypoint_names)
         assert model(IMAGE) == []
+
+
+@needs("mediapipe-pose-heavy")
+def test_pose_confidence_is_an_option():
+    with catalog.create("mediapipe-pose-heavy", min_confidence=0.1) as model:
+        assert model(IMAGE) == []

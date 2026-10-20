@@ -17,18 +17,44 @@ The use case produces:
 
 ## How it works
 
-1. **Board.** A quadrilateral found on the temporal median of the frames: the lecturer moves, so they
-   disappear from the median. It is then rectified with a homography. Alternatively the 4 corners are
-   given by hand (`--quad`), once per room.
+1. **Layout.** The crop and the audience line come from `--crop` and `--redact-below`, or from the
+   `setup.json` that Lorenzo confirmed for `anonymize` (`--setup`). The rows below the audience line
+   are blacked out before any model sees the frame. A pose model looking for one person otherwise
+   picks a student in the front row.
+   (`core.layout`, `core.redact.black_out_below`)
+2. **Board.** A dark quadrilateral found with Otsu on the temporal median of the frames, above the
+   audience line. The lecturer moves, so they disappear from the median. Each side is then moved
+   outward to the board's real edge: the strongest dark-to-light step, or, on the top side, a light
+   strip running along the board, whose glow Otsu takes for wall. The board is rectified with a
+   homography. Alternatively the 4 corners are given by hand (`--quad`).
    (`core.io.median_frame`, `usecases/board/detect.py`, `core.geometry.rectify_homography`)
-2. **Lecturer.** The mask from MediaPipe PoseLandmarker, plus the arms drawn as segments between the
-   shoulder, elbow, wrist and index keypoints. Optional: DeepLab V3 on the crop around the person
-   (`--refine-model deeplab-v3`).
-   (`usecases/board/person_mask.py`, `ops.skeleton`, `ops.crop_refine`)
-3. **Reconstruction.** For every pixel of the rectified board, the median of the last N samples in
-   which it was not covered. A pixel covered now was visible shortly before or will be shortly after.
-   (`core.temporal.PlaneMedian`)
-4. **Pointed spot.** The index fingertip of the arm raised highest relative to the torso, mapped to
+3. **Camera framing.** A frame every 15 s is aligned (ECC, rotation and shift) to a reference on the
+   band above the board. A move that lasts splits the video into segments:
+   - each segment gets its own median and its own corners, rectified onto the same plane, so the
+     board carries on across the move;
+   - segments shorter than `--min-segment` are skipped, such as the title card or the seconds while
+     the camera is being set;
+   - so are the frames while the camera is moving.
+
+   With `--quad`, the same hand-set corners serve every segment. (`core.framing`)
+4. **Lecturer.** The mask from MediaPipe PoseLandmarker, at confidence 0.1 instead of 0.5. The arms
+   are added as segments between the shoulder, elbow, wrist and index keypoints. When the pose finds
+   nobody, the mask is the box of the foreground blob shaped like a standing person: tall, and down
+   to the audience line. The foreground is the difference from the segment's median. Optional:
+   DeepLab V3 on the crop around the person (`--refine-model deeplab-v3`).
+   (`usecases/board/person_mask.py`, `ops.skeleton`, `ops.crop_refine`, `core.foreground`)
+5. **Reconstruction.** For every pixel of the rectified board, the median of the last N samples in
+   which it was not covered, 21 samples 2 s apart by default. A pixel covered now was visible shortly
+   before or will be shortly after. Each frame is first divided by its exposure gain, measured on the
+   visible board against the segment's median: the camera's exposure drifts by a few percent and
+   jumps between frames. The reference stays fixed on purpose. Against the board being rebuilt the
+   gain drifted: on the 13 October lecture it reached 1.10–1.25, where the board's real gain stays
+   within 0.99–1.05.
+   (`core.temporal.PlaneMedian`, `core.foreground.exposure_gain`)
+6. **Snapshots.** A pixel has changed when it moved by more than half the chalk contrast measured on
+   the video, between 6 and 25 levels. A snapshot is taken when enough pixels have changed
+   (`--min-change`) and the change has settled. (`usecases/board/chalk.py`)
+7. **Pointed spot.** The index fingertip of the arm raised highest relative to the torso, mapped to
    board coordinates. (`ops.pointing`)
 
 The pose and refine models are picked by name from the catalog (`vision-toolkit models list`), so a
@@ -102,20 +128,50 @@ On a frame of the CIT lecture (`notebooks/01_single_frame.ipynb`):
 The figures come from a frame in which the lecturer is censored with areas of average colour: they
 must be confirmed on a real video.
 
+### Blind calibration on four real lectures
+
+On 2026-10-20, scripts ran on the four lectures of 6, 8, 13 and 15 October and printed only numbers,
+one sample every 2 s (privacy protocol in [anonymize](anonymize.md#privacy-protocol)). The images
+looked at were frames Lorenzo had released. Figures are in the order 6, 8, 13 and 15 October.
+
+| Measure | Finding | Change |
+|---|---|---|
+| Pose on the full frame, one person | locks onto a student in 17%, 1%, 38% and 11% of the poses found (nose below the audience line) | audience blacked out first |
+| Pose misses the lecturer | 18%, 1%, 21% and 6% of the samples, up to 38 s in a row | confidence 0.1; foreground fallback |
+| Both changes together, on the missed frames | lecturer found in 65%, 53%, 94% and 88% of them; a person invented in 4 of 188 empty frames | — |
+| Exposure | the wall gain drifts by ±3–7%, with 2–4% jumps between samples; the board's gain differs from the wall's by up to ±7% | gain measured on the board, against the segment's median |
+| Chalk contrast in single frames | median 17, 14, 42 and 30 levels; the old threshold of 25 saw 27%, 19%, 86% and 59% of the stroke pixels | threshold from the chalk |
+| Lecturer standing still | 90th percentile 6–8 s, longest 14–20 s, against a 7 s window | 21 samples 2 s apart |
+| Otsu corners | 25–50 px short at the top, under the light strip | sides moved to the real edge |
+| Camera framing | one jump of 31 px at 18 s in the 6 October lecture, then still; one framing in the others | framing segments |
+
+The corners found by `find_board` on the medians of the originals agree within 1.3 px with the ones
+checked on released frames. Where the pose finds the lecturer, the final mask covers the head disk in
+96–98% of the poses.
+
 ## Usage
 
 ```
 vision-toolkit models download                 # once: model files into models/
-vision-toolkit board data/video/lezione.mp4 --step 1
+vision-toolkit board data/video/lezione.mp4 --setup output/anonymized/lezione/setup.json
 ```
 
 Main options:
-- `--step`: seconds between two analysed frames (default 1)
-- `--crop x,y,w,h`: video area, if it is a screen recording with the player interface
+- `--step`: seconds between two analysed frames (default 2)
+- `--setup setup.json`: crop and audience line, as confirmed for `anonymize`
+- `--crop x,y,w,h`: video area, if it is a screen recording with the player interface (overrides the setup)
+- `--redact-below`: audience line in the cropped frame (overrides the setup)
 - `--quad file.json`: board corners set by hand
-- `--window`: samples in the temporal median (default 7)
+- `--window`: samples in the temporal median (default 21)
 - `--min-change`: fraction of changed pixels that triggers a new snapshot (default 0.004)
+- `--change-threshold`: levels a pixel must change by to count (default: half the chalk contrast of
+  the video, between 6 and 25)
+- `--no-match-exposure`: keep each frame's exposure as it is
+- `--framing-step`: seconds between two frames of the framing check (default 15; `none` skips it)
+- `--min-segment`: framing segments shorter than this are skipped (default 60 s)
 - `--pose-model`: pose model from the catalog (default `mediapipe-pose-heavy`)
+- `--pose-confidence`: the pose model's `min_confidence` (default 0.1; `none` keeps the model's own)
+- `--no-fallback`: no foreground blob when the pose finds nobody
 - `--refine-model`: segmentation model run on the crop around the lecturer, e.g. `deeplab-v3`
   (default none)
 - `--refine-labels`: labels of the refine model that belong to the lecturer (default `person`)
@@ -126,8 +182,14 @@ From Python: `vision_toolkit.usecases.board.pipeline.run(video, out_dir, BoardOp
 
 In `output/<video name>/`:
 - `board_<hh>h<mm>m<ss>s.png`: clean board snapshots
-- `board_final.png`, plus `median.png` and `quad.json` when the corners are detected (`quad.json` holds `{"quad": [[x, y], ...]}`, tl, tr, br, bl)
-- `pointing.jsonl`: one line per analysed frame with the lecturer in view
+- `board_final.png`, plus `median.png` and `quad.json` when the corners are detected (`quad.json` holds `{"quad": [[x, y], ...]}`, tl, tr, br, bl).
+  With several framing segments they are those of the longest one; `median.png` has the audience
+  blacked out
+- `pointing.jsonl`: one line per analysed frame in which the pose found the lecturer
+- `run.json`: what the run measured and decided. It has the framing segments (start, end, used or
+  why skipped, corners), the snapshot threshold and the chalk contrast it came from, how the lecturer
+  was found (pose, foreground, nobody), the exposure gain percentiles and the number of snapshots.
+  The vault does not read it.
 
 ```json
 {"t": 693.0, "frame_xy": [679, 415], "board_xy": [612, 251], "board_xy_norm": [0.398, 0.762],
@@ -146,18 +208,26 @@ must be agreed first (see [architecture](../architecture.md#usecases)).
 
 ## Status
 
-The pipeline is complete, verified only on one frame and on a synthetic video.
+The pipeline is complete. It was calibrated blind on four real lectures (see above), and the changes
+the calibration called for are in. Its snapshots of a real lecture have not been judged yet: Lorenzo
+answers «is the lecturer absent?» for each one (L5 in [anonymize](anonymize.md#where-the-person-comes-in)),
+and the answers give the true leak rate.
 
-Known problem: on the synthetic video the pointed spot is right in 7 frames out of 10. In one the hand
-leaves the frame. In the other two, PoseLandmarker reads the stretched arm as lowered, even on frames
-almost identical to one it reads correctly. Countermeasures to try on the real video:
+Known problems:
+- on the synthetic video the pointed spot is right in 7 frames out of 10. In one the hand leaves the
+  frame. In the other two, PoseLandmarker reads the stretched arm as lowered, even on frames almost
+  identical to one it reads correctly;
+- on the real lectures the arm is raised above 60° in 51–60% of the frames, because the lecturer
+  writes: the arm angle alone does not tell pointing from writing.
+
+Countermeasures to try:
 - MediaPipe's VIDEO mode (tracking between frames);
-- accepting a pointing gesture only if it persists for 2 or more samples.
+- accepting a pointing gesture only if it persists for 2 or more samples, and away from the chalk
+  that appears.
 
 Next steps:
-- try it on a real video of a whole lecture
+- judge the snapshots of the four lectures (L5) and tune from the leak rate
 - shadows of the lecturer on the board (they are not in the mask)
-- tune the snapshot threshold, and tell pointing from gesturing (angle and duration of the pose)
 - export for the summaries: snapshots + transcript intervals + pointed areas
 - query by timestamp: given a moment (or a sentence of the transcript), return the snapshot and the
   pointed area in the window (see "From the transcript to the formula")

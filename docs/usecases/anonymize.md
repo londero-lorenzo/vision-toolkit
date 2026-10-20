@@ -48,7 +48,8 @@ per doubtful frame. How many doubts a lecture produces will be known after the f
 0. **Setup (L1).** Without a confirmed `setup.json` the run proposes one and stops. The crop is the
    non-black area of the median frame (`core.io.content_box`), so the player bars stay out, including
    the name in the Teams bar. `redact_below` starts empty. Lorenzo checks `setup.png`, corrects the
-   values if needed and sets `confirmed` to true. One setup can serve several videos (`--setup`).
+   values if needed and sets `confirmed` to true. One setup can serve several videos (`--setup`), and
+   `vision-toolkit board --setup` reads the same file (`core.layout`).
 
    Then, for each requested time (every `--step` seconds, or `--times`):
 1. **Frame.** The frame is read with the crop (`core.io.FrameReader`), and the band below
@@ -63,7 +64,7 @@ per doubtful frame. How many doubts a lecture produces will be known after the f
 3. **Doubts** (`doubts.py`). A frame is doubtful when any of these holds:
    - **`person-without-head`:** foreground that no pose with a head explains. The foreground is
      the difference from the median, after compensating the exposure gain, cleared of thin changes
-     such as chalk strokes;
+     such as chalk strokes (`core.foreground.foreground_mask`, shared with `board`);
    - **`face-outside-pose`:** a YuNet face far from every pose's head;
    - **`head-at-edge`:** a head touching the edge of the frame, where keypoints are unreliable.
 4. **Resolving doubts.**
@@ -174,11 +175,17 @@ frame.
 
 ## Status
 
-- **Tests:** implemented and tested on synthetic videos with fake models. With the real models it has
-  run on `data/video/sintetico.mp4`, where two frames out of five were replaced by a neighbour because
-  of `person-without-head`.
-- **Not yet run on a real lecture.** The doubt thresholds (`--min-blob`, the difference threshold, the
-  opening) are to be tuned after the first video (L6).
-- **Fragile point:** the foreground is the difference from the median of the whole lecture, so
-  erasing the board or a laptop screen that changes can raise false doubts. A false doubt costs
-  Lorenzo a minute. A missed doubt is caught by the release (L3).
+- **Tests:** implemented and tested on synthetic videos with fake models.
+- **First real run, 2026-10-20:** the four lectures of 6, 8, 13 and 15 October, one frame every
+  300 s, with the shared setup (crop `0,68,1674,944`, audience line 690). Lorenzo approved every
+  `auto` frame without corrections. The doubts were:
+  - the Teams title card in the first 3 s, now skipped with `--start 5`;
+  - a stain that turned out to be the lecturer's trousers;
+  - two harmless doubts;
+  - new chalk on the board.
+- **The doubt thresholds** (`--min-blob`, the difference threshold, the opening), the episode gap and
+  a review budget are still to be decided (L6).
+- **Fragile point:** the foreground is the difference from the median of the whole lecture. Writing
+  that appears later is missing from that median and comes out as foreground; so can erasing the
+  board, or a laptop screen that changes. A median over a time window would avoid it. A false doubt
+  costs Lorenzo a minute. A missed doubt is caught by the release (L3).

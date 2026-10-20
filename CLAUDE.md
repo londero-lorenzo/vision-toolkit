@@ -9,12 +9,13 @@ pluggable, picked by name from a catalog.
 
 - First use case, implemented: **board without lecturer** (`vision-toolkit board`). From lecture
   videos it removes the lecturer, saves a clean board snapshot at every change and logs the pointed
-  spot with its timestamp. Page: `docs/usecases/board.md`. It still needs a real lecture video, and
-  pointing is right in 7 frames out of 10 on the synthetic video.
+  spot with its timestamp. Page: `docs/usecases/board.md`. It was calibrated blind on the four real
+  lectures, and the changes the calibration called for are in. Its snapshots still wait for Lorenzo's
+  judgement (L5). Pointing is right in 7 frames out of 10 on the synthetic video.
 - Second use case, implemented: **anonymize** (`vision-toolkit anonymize`). It pixelates the faces in
   frames of a video and puts the frames in a review queue for Lorenzo. Page:
-  `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has not run
-  on the four real lectures yet, and its doubt thresholds are tuned after the first one.
+  `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on
+  the four real lectures, and Lorenzo approved every frame. Its doubt thresholds are still open (L6).
 - Next step: absorb `D:\Programmazione\Projects\image-stitching` as the `canvas` use case. Where it
   lands (a registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is
   in `docs/architecture.md`.
@@ -23,12 +24,12 @@ pluggable, picked by name from a catalog.
 
 ```
 src/vision_toolkit/
-  core/       video I/O, plane geometry, temporal reconstruction, redaction, review queue
-              (imports nothing internal)
+  core/       video I/O, camera framing, plane geometry, temporal reconstruction, foreground,
+              redaction, recording layout, review queue (imports nothing internal)
   tasks/      interfaces per domain: Protocol + NumPy results (segmentation, pose, detection)
   models/     implementations by backend (mediapipe/, opencv/) + catalog.py (models by name, downloads)
   ops/        model-agnostic algorithms on task results (crop_refine, skeleton, pointing, faces)
-  usecases/   board/ (detect, person_mask, pipeline, cli), anonymize/ (doubts, pipeline, cli)
+  usecases/   board/ (detect, person_mask, chalk, pipeline, cli), anonymize/ (doubts, pipeline, cli)
   cli.py      `vision-toolkit models|review|board|anonymize`
 ```
 
@@ -41,7 +42,8 @@ record in `docs/decisions/`, in the existing format.
 Board output format: snapshots `board_<hh>h<mm>m<ss>s.png`, `board_final.png`, `median.png`,
 `quad.json` (key `quad`) and `pointing.jsonl` (keys `t, frame_xy, board_xy, board_xy_norm,
 arm_angle, occluded_fraction, snapshot`). The vault reads it, and `tests/usecases/test_board_pipeline.py`
-pins it. Any change must be agreed with Lorenzo first.
+pins it. Any change must be agreed with Lorenzo first. `run.json` records what a run measured and
+decided; the vault does not read it.
 
 ## Data
 

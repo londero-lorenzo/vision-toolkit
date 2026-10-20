@@ -1,7 +1,6 @@
 import numpy as np
 
-from vision_toolkit.usecases.anonymize.doubts import (episodes, foreground_mask, representative, select,
-                                                      unexplained_blobs)
+from vision_toolkit.usecases.anonymize.doubts import episodes, representative, select, unexplained_blobs
 
 
 def test_episodes_group_close_times():
@@ -25,20 +24,6 @@ def test_select_spreads_a_budget_over_time():
     assert select(groups, budget=3) == [[0], [2], [4]]
     assert select(groups, budget=1) == [[2]]
     assert select(groups, budget=0) == []
-
-
-def test_foreground_ignores_exposure_drift_and_thin_strokes():
-    background = np.full((200, 300, 3), 150, np.uint8)
-    frame = (background * 0.94).astype(np.uint8)  # the video got 6% darker
-    frame[50:90, 100:140] = 20                    # something person-sized
-    frame[150:152, 20:280] = 255                  # a chalk stroke
-    mask = foreground_mask(frame, background)
-    assert mask[70, 120] == 255
-    assert mask[151, 150] == 0 and mask[20, 20] == 0
-
-    background[180:] = 0                          # a redacted band never counts
-    frame[180:] = 0
-    assert foreground_mask(frame, background)[190, 150] == 0
 
 
 def test_unexplained_blobs():

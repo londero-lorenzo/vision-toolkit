@@ -15,15 +15,22 @@ class PoseLandmarker(Model):
 
     It works in two stages (detect the person, then crop and analyse it), so it
     finds people that are small in the full frame. Satisfies tasks.pose.PoseEstimator.
+
+    min_confidence sets MediaPipe's three thresholds (person detection, pose presence,
+    tracking); 0.5 is MediaPipe's default. Lower finds people seen from the side or
+    in poor light, at the price of more false people.
     """
 
     keypoint_names = KEYPOINT_NAMES
 
-    def __init__(self, model_path, num_poses=1, mask_threshold=0.5):
+    def __init__(self, model_path, num_poses=1, mask_threshold=0.5, min_confidence=0.5):
         opts = vision.PoseLandmarkerOptions(
             base_options=base_options(model_path),
             num_poses=num_poses,
             output_segmentation_masks=True,
+            min_pose_detection_confidence=min_confidence,
+            min_pose_presence_confidence=min_confidence,
+            min_tracking_confidence=min_confidence,
         )
         self._landmarker = vision.PoseLandmarker.create_from_options(opts)
         self.mask_threshold = mask_threshold

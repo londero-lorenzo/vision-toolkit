@@ -25,12 +25,11 @@ class ColorPose(Model):
     keypoint_names = ("left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist",
                       "right_wrist", "left_index", "right_index", "left_hip", "right_hip")
 
-    def __init__(self, tolerance=60):
+    def __init__(self, tolerance=60, min_confidence=0.5):  # min_confidence: accepted as a real model does, unused
         self.tolerance = tolerance
 
     def __call__(self, image):
-        diff = np.abs(image.astype(np.int16) - np.int16(PERSON_BGR)).max(axis=2)
-        mask = (diff < self.tolerance).astype(np.uint8) * 255
+        mask = person_pixels(image, self.tolerance)
         ys, xs = np.nonzero(mask)
         if len(xs) < 100:
             return []
@@ -47,6 +46,45 @@ class ColorPose(Model):
             "left_hip": (left, bottom - 10), "right_hip": (right, bottom - 10),
         }
         return [Pose({name: Keypoint(float(x), float(y)) for name, (x, y) in kp.items()}, mask)]
+
+
+def person_pixels(image, tolerance=60):
+    """uint8 (0/255) mask of the pixels close to PERSON_BGR."""
+    diff = np.abs(image.astype(np.int16) - np.int16(PERSON_BGR)).max(axis=2)
+    return (diff < tolerance).astype(np.uint8) * 255
+
+
+class LargestPersonPose(ColorPose):
+    """
+    ColorPose that sees only the largest orange blob, as a pose model looking for
+    one person picks one among several: a student in front, for instance.
+    """
+
+    def __call__(self, image):
+        mask = person_pixels(image, self.tolerance)
+        n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        if n <= 1:
+            return []
+        largest = 1 + int(stats[1:, cv2.CC_STAT_AREA].argmax())
+        only = image.copy()
+        only[(mask > 0) & (labels != largest)] = 128
+        return super().__call__(only)
+
+
+class BlindSpotPose(ColorPose):
+    """ColorPose that finds nobody while the person's centre is within `blind` (x0, x1): seen from the side, say."""
+
+    def __init__(self, blind=(0, 0), **options):
+        super().__init__(**options)
+        self.blind = blind
+
+    def __call__(self, image):
+        poses = super().__call__(image)
+        if poses:
+            centre = (poses[0]["left_shoulder"].x + poses[0]["right_shoulder"].x) / 2
+            if self.blind[0] <= centre < self.blind[1]:
+                return []
+        return poses
 
 
 class HeadColorPose(ColorPose):
@@ -155,9 +193,13 @@ def draw_face(image, cx, cy, radius=FACE_RADIUS, cell=4):
 BOARD_QUAD = np.float32([[60, 50], [580, 70], [570, 300], [70, 290]])
 
 
-def draw_room(size=(640, 400), writing=False):
+def draw_room(size=(640, 400), writing=False, wall_marks=False):
+    """The room; wall_marks adds light marks high on the wall, which show where the camera points."""
     w, h = size
     room = np.full((h, w, 3), 190, np.uint8)
+    if wall_marks:
+        for x in range(20, w - 30, 70):
+            cv2.rectangle(room, (x, 3 + x % 3 * 2), (x + 26, 16 + x % 3 * 2), (240, 240, 235), -1)
     cv2.fillPoly(room, [np.int32(BOARD_QUAD)], (45, 50, 45))
     for i, y in enumerate((100, 140, 180)):
         cv2.line(room, (120, y + i * 3), (480 - i * 60, y + i * 5), (230, 230, 230), 4)

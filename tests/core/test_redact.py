@@ -1,6 +1,6 @@
 import numpy as np
 
-from vision_toolkit.core.redact import pixelate
+from vision_toolkit.core.redact import black_out_below, pixelate
 
 
 def noisy(shape=(60, 80, 3)):
@@ -43,3 +43,10 @@ def test_gray_image_and_empty_mask():
     np.testing.assert_array_equal(pixelate(gray, mask, 4), gray)
     mask[0:8, 0:8] = 255
     assert len(np.unique(pixelate(gray, mask, 8)[0:8, 0:8])) == 1
+
+
+def test_black_out_below():
+    image = np.full((10, 4, 3), 200, np.uint8)
+    assert black_out_below(image, None) is image
+    out = black_out_below(image, 6)
+    assert (out[6:] == 0).all() and (out[:6] == 200).all() and (image == 200).all()

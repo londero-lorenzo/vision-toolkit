@@ -26,8 +26,8 @@ ops         model-agnostic algorithms on task results  │ implement
 tasks       interfaces: Protocol + NumPy results ◄─────┘
  │
  ▼
-core        foundations on plain arrays: video I/O, plane geometry, temporal reconstruction, redaction,
-            review queues, paths
+core        foundations on plain arrays: video I/O, camera framing, plane geometry, temporal
+            reconstruction, foreground, redaction, recording layout, review queues, paths
             (every layer may import core; core imports nothing internal)
 ```
 
@@ -60,9 +60,12 @@ src/vision_toolkit/
   core/
     paths.py                  models_dir(): repo models/ or $VISION_TOOLKIT_MODELS
     io.py                     iter_frames, FrameReader, apply_crop, content_box, median_frame, format_time
+    framing.py                camera_motion, framing_segments: stretches of video with one camera framing (ECC)
     geometry.py               order_corners, polygon_mask, rectify_homography, to_plane, save_quad/load_quad
-    temporal.py               PlaneMedian: masked per-pixel temporal median on a rectified plane
-    redact.py                 pixelate: masked pixels replaced by the mean of their block
+    temporal.py               PlaneMedian: masked per-pixel temporal median on a rectified plane, exposure matched
+    foreground.py             exposure_gain, foreground_mask: a frame against a static background
+    redact.py                 pixelate, black_out_below
+    layout.py                 Setup, load_setup, save_setup: crop and audience line of a recording (setup.json)
     review.py                 ReviewQueue: images waiting for a person's decision, kept as plain files
   tasks/
     base.py                   Model: context-manager base class for implementations
@@ -84,12 +87,15 @@ src/vision_toolkit/
     faces.py                  HEAD_KEYPOINTS, head_width, head_box, face_mask: heads of poses and face detections
   usecases/
     board/
-      detect.py               detect_board: dark board on a light wall (Otsu + contour)
-      person_mask.py          PersonMasker: pose mask + arm skeleton + optional refine model + dilation
-      pipeline.py             BoardOptions, run: snapshot policy, pointing.jsonl, board_final.png
+      detect.py               find_board, detect_board, refine_quad: dark board on a light wall (Otsu + contour),
+                              sides moved to the real edge
+      person_mask.py          PersonMasker, person_blob: pose mask + arm skeleton + optional refine model
+                              + dilation; a person-shaped foreground blob when the pose finds nobody
+      chalk.py                stroke_contrast, change_threshold: the snapshot threshold from the chalk
+      pipeline.py             BoardOptions, run: framing segments, snapshot policy, pointing.jsonl, run.json
       cli.py                  `vision-toolkit board` options
     anonymize/
-      doubts.py               foreground_mask, unexplained_blobs, episodes, select: which frames need a person
+      doubts.py               unexplained_blobs, episodes, select: which frames need a person
       pipeline.py             AnonymizeOptions, Setup, run: setup, pixelated faces, review queue, manifest.jsonl
       cli.py                  `vision-toolkit anonymize` options
 ```
@@ -133,13 +139,16 @@ missing files (`vision-toolkit models download <name>`) or missing backend (`pip
 ### core
 
 **Responsibility.** Foundations that any layer may need, on plain NumPy and OpenCV: reading frames
-from a video, plane geometry (quadrilaterals, homographies), the temporal reconstruction of a static
-background on a rectified plane, and paths.
+from a video, telling where the camera moved, plane geometry (quadrilaterals, homographies), the
+temporal reconstruction of a static background on a rectified plane, comparing a frame with a
+background, and paths.
 
-**Belongs here:** `iter_frames`, `median_frame`, `rectify_homography`, `to_plane`, `PlaneMedian`,
-`pixelate`, `ReviewQueue`. The test is that the algorithm needs no model, no task result and no domain
-assumption. The review queue qualifies: it is a contract on files, and it knows neither the use cases
-that fill it nor the app that will work through it.
+**Belongs here:** `iter_frames`, `median_frame`, `framing_segments`, `rectify_homography`, `to_plane`,
+`PlaneMedian`, `exposure_gain`, `foreground_mask`, `pixelate`, `Setup`, `ReviewQueue`. The test is that
+the algorithm needs no model, no task result and no domain assumption. The review queue qualifies: it
+is a contract on files, and it knows neither the use cases that fill it nor the app that will work
+through it. So does the recording layout: a crop and a row, confirmed by a person, that two use cases
+read.
 
 **Does not belong here:**
 - domain assumptions such as "a dark board on a light wall" (`detect_board` lives in `usecases/board/`);
@@ -249,9 +258,10 @@ not arm length, tells pointing from resting" (`pointing_hand`).
 - adds its CLI subcommand.
 
 **Belongs here** (`board/`):
-- `detect.py`: dark board on a light wall;
+- `detect.py`: dark board on a light wall, with a light strip that may run along its top;
 - `person_mask.py`: the lecturer mask recipe;
-- `pipeline.py`: the snapshot policy and the `pointing.jsonl` format;
+- `chalk.py`: what counts as writing;
+- `pipeline.py`: the framing segments, the snapshot policy and the `pointing.jsonl` format;
 - `cli.py`.
 
 And in `anonymize/`:

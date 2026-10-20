@@ -6,15 +6,16 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from vision_toolkit.core.foreground import foreground_mask
 from vision_toolkit.core.io import FrameReader, apply_crop, content_box, format_time, median_frame
-from vision_toolkit.core.redact import pixelate
+from vision_toolkit.core.layout import Setup, load_setup, save_setup
+from vision_toolkit.core.redact import black_out_below, pixelate
 from vision_toolkit.core.review import ReviewQueue
 from vision_toolkit.models import catalog
 from vision_toolkit.ops.faces import face_mask, head_box, head_width
 from vision_toolkit.ops.skeleton import draw_limbs
 from vision_toolkit.usecases.anonymize.doubts import (FACE_OUTSIDE_POSE, HEAD_AT_EDGE, PERSON_WITHOUT_HEAD,
-                                                      episodes, foreground_mask, representative, select,
-                                                      unexplained_blobs)
+                                                      episodes, representative, select, unexplained_blobs)
 
 DEFAULT_POSE_MODEL = "mediapipe-pose-heavy"
 DEFAULT_FACE_MODEL = "yunet-face"
@@ -44,14 +45,6 @@ class AnonymizeOptions:
     episode_gap: float | None = None    # doubtful frames this close form one episode; 2 * step, 0 with times
     min_blob: float = 0.002             # fraction of the frame: smallest unexplained foreground that is a doubt
     models_dir: Path | None = None
-
-
-@dataclass
-class Setup:
-    crop: tuple | None          # (x, y, w, h) of the video area in the recording
-    redact_below: int | None    # rows from here down, in the cropped frame, are blacked out (the audience)
-    frame_size: tuple           # (w, h) of the videos the setup is for
-    confirmed: bool = False
 
 
 @dataclass
@@ -85,7 +78,7 @@ def run(video, out_dir, options=None):
 
     median = median_frame(video)
     setup = _confirmed_setup(Path(options.setup) if options.setup else out / "setup.json", median, out)
-    background = _redact(apply_crop(median, setup.crop), setup.redact_below)
+    background = black_out_below(apply_crop(median, setup.crop), setup.redact_below)
 
     queue = ReviewQueue(out)
     summary = Summary(out)
@@ -164,19 +157,6 @@ def run(video, out_dir, options=None):
     return summary
 
 
-def load_setup(path):
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    crop = data.get("crop")
-    return Setup(tuple(crop) if crop else None, data.get("redact_below"), tuple(data["frame_size"]),
-                 bool(data.get("confirmed", False)))
-
-
-def save_setup(path, setup):
-    data = {"crop": list(setup.crop) if setup.crop else None, "redact_below": setup.redact_below,
-            "frame_size": list(setup.frame_size), "confirmed": setup.confirmed}
-    Path(path).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-
-
 @dataclass
 class _Analysis:
     t: float
@@ -200,7 +180,7 @@ class _FrameAnonymizer:
         frame = self.reader.at(t)
         if frame is None:
             return None
-        frame = _redact(frame, self.redact_below)
+        frame = black_out_below(frame, self.redact_below)
         h, w = frame.shape[:2]
         poses = self.pose(frame)
         faces = self.detector(frame) if self.detector is not None else []
@@ -282,14 +262,6 @@ def _times(options, duration):
         return sorted({round(float(t), 2) for t in options.times if 0 <= t < duration})
     end = duration if options.end is None else min(options.end, duration)
     return [round(float(t), 2) for t in np.arange(options.start, end, options.step)]
-
-
-def _redact(frame, redact_below):
-    if redact_below is None:
-        return frame
-    frame = frame.copy()
-    frame[max(0, redact_below):] = 0
-    return frame
 
 
 def _clip(box, w, h):

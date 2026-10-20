@@ -22,3 +22,12 @@ def pixelate(image, mask, block):
     means = np.stack([np.bincount(cell, values[:, c]) / counts for c in range(values.shape[1])], axis=1)
     out[ys, xs] = np.round(means[cell]).astype(image.dtype).reshape(image[ys, xs].shape)
     return out
+
+
+def black_out_below(image, row):
+    """A copy of the image with the rows from `row` down set to black; the image itself if row is None."""
+    if row is None:
+        return image
+    out = image.copy()
+    out[max(0, row):] = 0
+    return out

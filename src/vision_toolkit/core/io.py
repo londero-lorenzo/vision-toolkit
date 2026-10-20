@@ -97,17 +97,21 @@ def _longest_run(flags):
     return best
 
 
-def median_frame(path, samples=30, crop=None):
+def median_frame(path, samples=30, crop=None, start=0.0, end=None):
     """
-    Temporal median of `samples` frames spread over the whole video.
+    Temporal median of `samples` frames spread between `start` and `end` seconds
+    (the whole video by default).
 
     Whatever moves (a person walking in front of the scene) disappears from
     the median, which leaves the static background.
     """
     cap = _open(path)
     n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25
+    first = min(n - 1, max(0, int(round(start * fps))))
+    last = n - 1 if end is None else min(n - 1, max(first, int(round(end * fps)) - 1))
     frames = []
-    for i in np.linspace(0, n - 1, samples).astype(int):
+    for i in np.linspace(first, last, samples).astype(int):
         cap.set(cv2.CAP_PROP_POS_FRAMES, int(i))
         ok, frame = cap.read()
         if ok:
