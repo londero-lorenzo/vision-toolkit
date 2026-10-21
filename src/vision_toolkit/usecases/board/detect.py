@@ -66,17 +66,23 @@ def refine_quad(image, quad, search=None, light_strip=15.0, samples=48):
     top side a light strip may run along the board: where the profile peaks more
     than `light_strip` levels above the wall, the edge is the peak. A line is
     fitted through each side's points (Huber, so stray points weigh little), and
-    the corners are where the lines meet.
+    the corners are where the lines meet. A quad with a side shorter than a pixel,
+    or whose fitted sides do not meet, is returned as it is.
     """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32)
     search = search or max(10, round(0.035 * image.shape[1]))
     tl, tr, br, bl = np.float32(quad)
+    if min(np.linalg.norm(b - a) for a, b in ((tl, tr), (tr, br), (bl, br), (tl, bl))) < 1:
+        return np.float32(quad)
     centre = (tl + tr + br + bl) / 4
     top = _side(gray, tl, tr, centre, search, samples, light_strip)
     right = _side(gray, tr, br, centre, search, samples)
     bottom = _side(gray, bl, br, centre, search, samples)
     left = _side(gray, tl, bl, centre, search, samples)
-    return np.float32([_meet(top, left), _meet(top, right), _meet(bottom, right), _meet(bottom, left)])
+    try:
+        return np.float32([_meet(top, left), _meet(top, right), _meet(bottom, right), _meet(bottom, left)])
+    except np.linalg.LinAlgError:
+        return np.float32(quad)
 
 
 def _side(gray, a, b, centre, search, samples, light_strip=None):

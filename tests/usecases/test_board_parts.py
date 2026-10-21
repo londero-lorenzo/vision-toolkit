@@ -4,7 +4,7 @@ import numpy as np
 
 from fakes import BOARD_QUAD, draw_room
 from vision_toolkit.usecases.board.chalk import change_threshold, stroke_contrast
-from vision_toolkit.usecases.board.detect import detect_board, find_board
+from vision_toolkit.usecases.board.detect import detect_board, find_board, refine_quad
 from vision_toolkit.usecases.board.person_mask import person_blob
 
 
@@ -27,6 +27,11 @@ def test_the_light_strip_moves_the_top_side_to_the_board_edge():
     otsu = detect_board(room)
     assert otsu[0][1] - BOARD_QUAD[0][1] > 8, "Otsu takes the glow for wall"
     np.testing.assert_allclose(find_board(room), BOARD_QUAD, atol=3)
+
+
+def test_refine_quad_keeps_a_degenerate_quad():
+    quad = np.float32([[100, 100], [100, 100], [500, 300], [100, 300]])  # tl == tr
+    np.testing.assert_array_equal(refine_quad(draw_room(), quad), quad)
 
 
 def test_find_board_ignores_what_lies_below_the_floor():
