@@ -105,8 +105,9 @@ From the first use case, valid beyond the board:
 
 ## Status
 
-- The board use case is complete, verified on one frame and on a synthetic video. It still needs a
-  real lecture video ([status](docs/usecases/board.md#status)).
-- The anonymize use case prepares that test: frames of the real lectures reach Claude only after
-  Lorenzo's review ([status](docs/usecases/anonymize.md#status)).
+- The board use case is complete and has run on four real lectures: after one round of
+  corrections, Lorenzo found no artefact in its snapshots. Pointing is measured only on a synthetic
+  video ([status](docs/usecases/board.md#status)).
+- The anonymize use case gives Claude frames of the real lectures only after Lorenzo's review
+  ([status](docs/usecases/anonymize.md#status)).
 - Next: absorb `image-stitching` as the canvas use case.

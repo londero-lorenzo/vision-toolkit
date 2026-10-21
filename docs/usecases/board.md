@@ -170,10 +170,10 @@ is sometimes readable only in the next snapshot. The samples around them point t
 | A pixel near a lecturer who stays is seen in one or two samples, a bad one included | 6 October at 40 min | a pixel changes only once seen in a quarter of the window |
 | The lecturer at the edge of the frame, partly out of view: neither the pose nor the standing shape finds her | 8 October at 12 and 24 min | followed through the foreground touching her last mask |
 
-On the new run, every snapshot of the 6 October lecture and all but one of the 8 October one match,
-within 50 pixels, a snapshot Lorenzo approved. None matches a rejected one. 18 snapshots differ from
-both and wait for a second judgement. The frames where nobody is found drop from 12%, 22%, 5% and
-10% to 8%, 7%, 1% and 6%; the lecturer is followed through the foreground in 4–15% of the frames.
+On the new run, 144 of the 162 snapshots match, within 50 pixels, one Lorenzo approved, and none
+matches a rejected one. He judged the other 18 and approved them all. The frames where nobody is
+found drop from 12%, 22%, 5% and 10% to 8%, 7%, 1% and 6%; the lecturer is followed through the
+foreground in 4–15% of the frames.
 
 The indicator tried first, zones present in one snapshot only, caught 6 of the 19 rejected snapshots
 it could measure and flagged 8 that Lorenzo found clean: a leak that lasts is in several snapshots.
@@ -244,8 +244,7 @@ must be agreed first (see [architecture](../architecture.md#usecases)).
 
 The pipeline is complete. It was calibrated blind on four real lectures, and Lorenzo judged its
 snapshots (L5 in [anonymize](anonymize.md#where-the-person-comes-in)): no person, 21 artefacts in
-189, whose causes are corrected (see above). The 18 snapshots of the new run that match none he
-judged wait for his answer.
+189, whose causes are corrected (see above). On the corrected run he found no artefact.
 
 Known problems:
 - on the synthetic video the pointed spot is right in 7 frames out of 10. In one the hand leaves the
@@ -260,7 +259,6 @@ Countermeasures to try:
   that appears.
 
 Next steps:
-- judge the 18 snapshots of the new run that match none already judged
 - export for the summaries: snapshots + transcript intervals + pointed areas
 - query by timestamp: given a moment (or a sentence of the transcript), return the snapshot and the
   pointed area in the window (see "From the transcript to the formula")
