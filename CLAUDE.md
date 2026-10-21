@@ -91,5 +91,10 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
 - **Git:** no commit without Lorenzo's «sì». Propose the files and the message, then wait. Commits carry
   Claude's `Co-Authored-By` line. Add files by name, never `git add -A`. Never `push --force` or
   `--no-verify`. No remote and no `gh repo create` without confirmation.
+- **Fixes:** every correction to the code gets a note in `docs/fixes/` (`NNNN-<slug>.md`, in the format
+  of 0001). The note says what went wrong and how it showed, the cause, what changed and how it was
+  verified. It goes in the same commit as the fix, with its row in `docs/fixes/README.md`, and the
+  commit message names it. The 16 corrections before 2026-10-22 have no note; their state is in
+  that README.
 - The context of the session that created the repo (experiments, figures, reasons) is in Claude's
   memory for this project.

@@ -25,7 +25,7 @@ src/vision_toolkit/
   cli.py       `vision-toolkit <command>`
 tests/         mirrors the layers; synthetic data, plus one test on a private frame
 notebooks/     explorations (01 single frame, 02 temporal reconstruction)
-docs/          architecture, migration guide, decisions, one page per use case
+docs/          architecture, migration guide, decisions, fix notes, one page per use case
 data/          frames, videos, calibration (outside git)
 models/        downloaded model files (outside git)
 output/        results (outside git)
@@ -102,6 +102,8 @@ From the first use case, valid beyond the board:
   [0004 English](docs/decisions/0004-english.md),
   [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md)
 - Use cases: [board without lecturer](docs/usecases/board.md), [anonymize](docs/usecases/anonymize.md)
+- [Fixes](docs/fixes/README.md): one note per correction to the code, and where the earlier ones are
+  written
 
 ## Status
 

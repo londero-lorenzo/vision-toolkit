@@ -337,3 +337,9 @@ Because use cases reach models only by name, the split is a move of files, not a
 - [0003](decisions/0003-model-layer.md): tasks, models, catalog and ops
 - [0004](decisions/0004-english.md): English everywhere
 - [0005](decisions/0005-anonymized-frames.md): frames leave the machine only through a person's review
+
+## Fixes
+
+Every correction to the code has a note in [fixes/](fixes/README.md), written in the same commit as
+the fix: what went wrong, the cause, what changed and how it was verified. The README there also
+records where the corrections made before the notes are written.
