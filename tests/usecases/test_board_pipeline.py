@@ -150,6 +150,25 @@ def test_lecturer_followed_through_the_foreground_once_lost(fake_pose, tmp_path)
     assert frames["lecturer_by_tracking"] == 5 and frames["nobody"] == 0
 
 
+def test_upper_body_cut_off_from_the_legs_is_followed(fake_pose, tmp_path):
+    # A belt the colour of the board cuts her in two. In the pose's blind spot the
+    # standing shape holds only her legs, and her upper body stays in front of the board
+    def frame(cx):
+        room = draw_person(draw_room(), cx)
+        room[255:275, cx - 30:cx + 31] = draw_room()[255:275, cx - 30:cx + 31]
+        return room
+
+    positions = [100, 500, 100, 500, 420, 340, 300, 300, 300, 300, 300, 500]
+    path = write_video(tmp_path / "belt.mp4", [frame(cx) for cx in positions])
+    options = dict(pose_model="blind-pose", redact_below=360, **FAST)
+    legs_only = run(path, tmp_path / "legs", BoardOptions(track=0, **options))
+    followed = run(path, tmp_path / "followed", BoardOptions(**options))
+    assert board_errors(legs_only, draw_room()) > 0.02
+    assert board_errors(followed, draw_room()) < 0.01
+    frames = json.loads((followed / "run.json").read_text(encoding="utf-8"))["frames"]
+    assert frames["lecturer_by_foreground"] == 5 and frames["nobody"] == 0
+
+
 def test_pose_mask_grows_over_what_the_pose_missed(fake_pose, tmp_path):
     # A sleeve the pose model does not see hangs from the body, and stays in front
     # of the board while the lecturer stands still

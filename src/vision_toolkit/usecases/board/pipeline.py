@@ -44,7 +44,7 @@ class BoardOptions:
     pose_confidence: float | None = 0.1     # the pose model's min_confidence; None keeps the model's default
     fallback: bool = True                   # a person-shaped foreground blob when the pose finds nobody
     grow_mask: bool = True                  # add the foreground blobs touching the pose mask
-    track: float = 20.0                     # seconds the lecturer is followed through the foreground once lost
+    track: float = 20.0                     # seconds the lecturer is followed through the foreground once the pose lost her
     refine_model: str | None = None
     refine_labels: tuple = ("person",)
     models_dir: Path | None = None
@@ -151,7 +151,7 @@ def run(video, out_dir, options=None):
                 for t, frame in iter_frames(video, options.step, segment.framing.start, segment.framing.end, crop):
                     person = lecturer(frame, segment, previous if tracked < max_tracked else None)
                     found[person.source or "none"] += 1
-                    tracked = tracked + 1 if person.source == TRACKED else 0
+                    tracked = tracked + 1 if person.source in (FOREGROUND, TRACKED) else 0
                     previous = person.mask if person.source else None
                     occluded = board.update(frame, person.mask)
                     gains.append(board.gain)

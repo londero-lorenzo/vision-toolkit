@@ -49,10 +49,12 @@ class PersonMasker:
     largest foreground blob shaped like a standing person (person_blob), grown in
     the same way. It has no pose, so no pointed spot.
 
-    At the edge of the frame the lecturer is partly out of view: the pose misses her
-    and what shows of her is no standing shape. Given the previous frame's mask, the
-    foreground blobs that touch it, `track_reach` of the frame width around it, are
-    taken for her.
+    Given the previous frame's mask, the foreground blobs that touch it, `track_reach`
+    of the frame width around it, are taken for her too. In front of the board the
+    standing shape may hold only her legs: her upper body, light on the dark board,
+    is a blob of its own, cut off at the board's lower edge, and only these blobs
+    reach it. At the edge of the frame she is partly out of view and what shows of
+    her is no standing shape: these blobs are then the whole mask.
     """
 
     def __init__(self, pose_model=DEFAULT_POSE_MODEL, refine_model=None, refine_labels=("person",),
@@ -91,7 +93,7 @@ class PersonMasker:
         floor: the row where the lecturer's blob ends, the audience line; the frame
         bottom by default.
         previous: the mask of the frame before, to follow the lecturer through the
-        foreground when neither the pose nor the standing shape finds her.
+        foreground when the pose does not find her.
         """
         mask = np.zeros(frame.shape[:2], np.uint8)
         poses = self.pose(frame)
@@ -99,16 +101,17 @@ class PersonMasker:
             if background is None or not self.fallback:
                 return PersonMask(mask, None, None, 0.0)
             foreground = foreground_mask(frame, background)
+            near = np.zeros_like(mask)
+            if previous is not None and previous.any():
+                k = max(3, int(self.track_reach * frame.shape[1]))
+                near = blobs_touching(foreground, cv2.dilate(previous, np.ones((k, k), np.uint8)))
             mask = person_blob(foreground, floor)
             if mask.any():
                 if self.grow:
                     mask |= blobs_touching(foreground, mask)
-                return PersonMask(self._dilate(mask), None, None, 0.0, FOREGROUND)
-            if previous is not None and previous.any():
-                k = max(3, int(self.track_reach * frame.shape[1]))
-                mask = blobs_touching(foreground, cv2.dilate(previous, np.ones((k, k), np.uint8)))
-                if mask.any():
-                    return PersonMask(self._dilate(mask), None, None, 0.0, TRACKED)
+                return PersonMask(self._dilate(mask | near), None, None, 0.0, FOREGROUND)
+            if near.any():
+                return PersonMask(self._dilate(near), None, None, 0.0, TRACKED)
             return PersonMask(mask, None, None, 0.0)
 
         pose = poses[0]

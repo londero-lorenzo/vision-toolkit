@@ -42,10 +42,11 @@ The use case produces:
    nobody, the mask is the box of the foreground blob shaped like a standing person: tall, and down
    to the audience line. The foreground blobs touching the mask join it: on the real lectures the
    pose mask misses a sleeve, the side turned away or a shadow for tens of seconds, long enough to
-   enter the board. At the edge of the frame the lecturer is partly out of view, and neither the
-   pose nor the standing shape finds her: for up to 20 s (`--track`), the foreground blobs touching
-   the previous frame's mask are taken for her. The foreground is the difference from the segment's
-   median. Optional: DeepLab V3 on the crop around the person (`--refine-model deeplab-v3`).
+   enter the board. For up to 20 s after the pose loses her (`--track`), the foreground blobs
+   touching the previous frame's mask are taken for her too. In front of the board the standing
+   shape may hold only her legs: her upper body is a blob of its own, cut off at the board's lower
+   edge. At the edge of the frame she is partly out of view and no standing shape at all. The
+   foreground is the difference from the segment's median. Optional: DeepLab V3 on the crop around the person (`--refine-model deeplab-v3`).
    (`usecases/board/person_mask.py`, `ops.skeleton`, `ops.crop_refine`, `core.foreground`)
 5. **Reconstruction.** For every pixel of the rectified board, the median of the last N samples in
    which it was not covered, 21 samples 2 s apart by default. A pixel covered now was visible shortly
@@ -179,6 +180,20 @@ The indicator tried first, zones present in one snapshot only, caught 6 of the 1
 it could measure and flagged 8 that Lorenzo found clean: a leak that lasts is in several snapshots.
 Lorenzo's judgement stays the measure.
 
+### Six more lectures
+
+On 2026-10-21 the pipeline ran with the same setup on six more lectures, of 6, 8, 13, 15 and 20
+October. Lorenzo judged their 245 snapshots: no person, and one artefact. It is a light patch in the
+6 October lecture at 18 min 8 s, and the chalk stays readable. In front of the board the standing
+shape held only the lecturer's legs, and her upper body entered the median. Cause and fix are in
+[fix 0001](../fixes/0001-upper-body-cut-off-from-the-legs.md).
+
+Three recordings stay out of these runs:
+- two lectures of 1 October, filmed by the lecturer's laptop camera, which she moves by hand. They
+  are kept for when a moving camera is handled;
+- the minute recorded on 8 October after the lecture, where students who stand up cross the
+  audience line.
+
 ## Usage
 
 ```
@@ -204,7 +219,8 @@ Main options:
 - `--pose-confidence`: the pose model's `min_confidence` (default 0.1; `none` keeps the model's own)
 - `--no-fallback`: no foreground blob when the pose finds nobody
 - `--no-grow-mask`: keep the mask as it is, without the foreground blobs touching it
-- `--track`: seconds the lecturer is followed through the foreground once lost (default 20; 0 never)
+- `--track`: seconds the lecturer is followed through the foreground once the pose lost her
+  (default 20; 0 never)
 - `--refine-model`: segmentation model run on the crop around the lecturer, e.g. `deeplab-v3`
   (default none)
 - `--refine-labels`: labels of the refine model that belong to the lecturer (default `person`)
@@ -244,7 +260,9 @@ must be agreed first (see [architecture](../architecture.md#usecases)).
 
 The pipeline is complete. It was calibrated blind on four real lectures, and Lorenzo judged its
 snapshots (L5 in [anonymize](anonymize.md#where-the-person-comes-in)): no person, 21 artefacts in
-189, whose causes are corrected (see above). On the corrected run he found no artefact.
+189, whose causes are corrected (see above). On the corrected run he found no artefact. On six more
+lectures he found one in 245, whose cause is corrected in
+[fix 0001](../fixes/0001-upper-body-cut-off-from-the-legs.md).
 
 Known problems:
 - on the synthetic video the pointed spot is right in 7 frames out of 10. In one the hand leaves the

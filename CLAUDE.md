@@ -11,8 +11,9 @@ pluggable, picked by name from a catalog.
   videos it removes the lecturer, saves a clean board snapshot at every change and logs the pointed
   spot with its timestamp. Page: `docs/usecases/board.md`. It was calibrated blind on the four real
   lectures. Lorenzo judged its snapshots (L5): no person, 21 artefacts in 189, whose causes are
-  corrected; on the corrected run he found none. Pointing is right in 7 frames out of 10 on the
-  synthetic video, and is not measured on the real lectures.
+  corrected; on the corrected run he found none. On six more lectures he found 1 in 245, corrected
+  in `docs/fixes/0001-upper-body-cut-off-from-the-legs.md`. Pointing is right in 7 frames out of 10
+  on the synthetic video, and is not measured on the real lectures.
 - Second use case, implemented: **anonymize** (`vision-toolkit anonymize`). It pixelates the faces in
   frames of a video and puts the frames in a review queue for Lorenzo. Page:
   `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on

@@ -47,8 +47,8 @@ def add_cli(subparsers):
     p.add_argument("--grow-mask", action=argparse.BooleanOptionalAction, default=True,
                    help="add to the pose mask the foreground blobs that touch it (a sleeve, a shadow)")
     p.add_argument("--track", type=float, default=20.0,
-                   help="seconds the lecturer is followed through the foreground touching her last mask, when "
-                        "neither the pose nor the standing shape finds her (0: never)")
+                   help="seconds the lecturer is followed through the foreground touching her last mask, once "
+                        "the pose has lost her (0: never)")
     p.add_argument("--refine-model", default=None,
                    help="segmentation model run on the crop around the lecturer and merged into the mask, "
                         "e.g. deeplab-v3")
