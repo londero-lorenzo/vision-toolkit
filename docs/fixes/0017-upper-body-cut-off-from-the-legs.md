@@ -1,10 +1,10 @@
-# 0001: The upper body is followed when only the legs are a standing shape
+# 0017: The upper body is followed when only the legs are a standing shape
 
 Date: 2026-10-22. Use case: board (`usecases/board/person_mask.py`, `usecases/board/pipeline.py`).
 
 ## Problem
 
-Lorenzo judged the 245 snapshots of six more lectures (L5) and rejected one, `board_00h18m08s.png`
+The 245 snapshots of six more lectures were judged by hand (L5), and one was rejected: `board_00h18m08s.png`
 of the 6 October lecture at 9:46. Around x 248, y 302 it shows a light patch: no face, and the chalk
 stays readable. The patch is about 90×90 pixels (x 203–291, y 262–350 on the rectified board). Its
 mean gray is 154, against 105 for the board around it. The snapshots at 17:58 and 18:30 do not have
@@ -13,10 +13,10 @@ it.
 ## Cause
 
 The masker was replayed on the samples from 1000 to 1112 s, following that area:
-- **The pose loses her.** In 5 of the 21 samples of the window (1054, 1066, 1076, 1080 and 1090 s),
+- **The pose loses the lecturer.** In 5 of the 21 samples of the window (1054, 1066, 1076, 1080 and 1090 s),
   the pose model finds nobody, and the mask falls back on the standing shape (`person_blob`).
-- **The standing shape holds only her legs.** It is the box of the foreground blob that reaches the
-  audience line, here rows 524–697 of the frame. Her upper body, light against the dark board, is a
+- **The standing shape holds only the legs.** It is the box of the foreground blob that reaches the
+  audience line, here rows 524–697 of the frame. The upper body, light against the dark board, is a
   blob of its own, cut off from the legs at the board's lower edge. It does not touch that box, so
   the foreground blobs joined to the mask (`blobs_touching`) leave it out.
 - **The median takes it.** In those 5 samples, 81–96% of the area is foreground left outside the
@@ -31,9 +31,9 @@ previous mask, but only when the standing shape found nothing.
 - **`PersonMasker`.** When the pose finds nobody and the previous frame's mask is given, the
   foreground blobs touching it, within `track_reach` of the frame width, join the standing shape.
   Without a standing shape they are the whole mask, as before (source `tracked`).
-- **`pipeline.run`.** The `--track` budget counts the samples since the pose lost her, whether the
+- **`pipeline.run`.** The `--track` budget counts the samples since the pose lost the lecturer, whether the
   mask came from the foreground or from tracking. Before, a foreground sample reset it. Now a blob
-  that stays, such as an erased area touching her, cannot stay joined to the mask for more than 20 s.
+  that stays, such as an erased area touching the lecturer, cannot stay joined to the mask for more than 20 s.
 - **Documentation.** Step 4 of `docs/usecases/board.md` and the help of `--track`.
 
 A second remedy was tried and dropped. It grew the standing shape upward by 8% of the frame height,
@@ -56,7 +56,7 @@ to reach the blob above it, and covered none of the area.
   thousand on the board. Those pixels wait for the next sample, they are not lost.
 - **Test.** In `test_upper_body_cut_off_from_the_legs_is_followed`
   (`tests/usecases/test_board_pipeline.py`), a belt the colour of the board cuts the synthetic
-  lecturer in two while the pose misses her. Without the fix, 8.1% of the final board is wrong; with
+  lecturer in two while the pose misses the lecturer. Without the fix, 8.1% of the final board is wrong; with
   it, less than 1%. All 135 tests pass.
 - **On the ten lectures.** The pipeline ran again with the same setup on the ten lectures, and gave
   406 snapshots, `board_final` included, against 407 before. 401 match, within 50 pixels, one that

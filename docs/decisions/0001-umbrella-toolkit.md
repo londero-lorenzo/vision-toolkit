@@ -5,8 +5,8 @@ Status: accepted (2026-10-18).
 ## Context
 
 The repository was born for one task: remove the lecturer from the board in lecture videos, so that
-Claude can read clean snapshots next to the lecture transcripts in the study vault. Lorenzo has
-other image studies with the same building blocks. `image-stitching` merges DrawNote canvas exports
+clean snapshots can be read next to the lecture transcripts in the study vault. Other image
+studies use the same building blocks. `image-stitching` merges DrawNote canvas exports
 with SIFT and homographies, and more will follow.
 
 There were two options. The repository could hold only segmentation, with each other study in its own
@@ -31,12 +31,12 @@ that core or depend on each other.
 - **`image-stitching` is absorbed in a second step**, as the `canvas` use case
   ([architecture](../architecture.md#where-future-work-lands)). Until then the old repository stays
   as it is, with its history.
-- **Out of scope:** transcripts, Whisper and calls to Claude. The toolkit produces artifacts: clean
+- **Out of scope:** transcripts, Whisper and calls to a language model. The toolkit produces artifacts: clean
   snapshots, `pointing.jsonl`, and later a "moment → snapshot + pointed area" query. Aligning them with
   the transcripts stays on the vault side.
 
 ## Consequences
 
 - The README describes the toolkit. Each use case has its own page in `docs/usecases/`.
-- Lorenzo renames the folder and the Claude memory folder after this change. The environment must be
+- The folder and the assistant's memory folder are renamed after this change. The environment must be
   recreated after the rename ([migration guide](../migration-guide.md#1-reinstall)).

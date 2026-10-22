@@ -10,32 +10,33 @@ masks. The frames show the lecturer and the students, who have not agreed to be 
 by hand, frame by frame, does not scale to whole lectures.
 
 The models never see the anonymized copies: they run locally on the originals. The copies are only
-for whoever may not see the originals, Claude during calibration. Hiding the face would also hurt the
+for whoever may not see the originals: the assistant during calibration. Hiding the face would also hurt the
 pose model, whose detector uses the face as its main signal. Measurements are therefore always taken
 on the originals.
 
 ## Privacy protocol
 
-1. **The originals in `data/video/` are processed, never viewed.** Claude runs code on them and does
-   not open them.
+1. **The originals in `data/video/` are processed, never viewed.** The assistant runs code on them and
+   does not open them.
 2. **Numbers travel freely**: `manifest.jsonl`, `vision-toolkit review status`, calibration statistics.
-3. **Claude looks only at two kinds of image:**
-   - images in the `approved/` folder of a review queue, put there by Lorenzo;
+3. **The assistant looks only at two kinds of image:**
+   - images in the `approved/` folder of a review queue, put there by the reviewer;
    - images that contain no person by construction: binary masks, skeletons on black.
 4. **Every other image derived from the originals goes through a queue.** This covers the median, the
    board snapshots, `setup.png`, frames asked for by the calibration, and `data/video/sintetico.mp4`,
    which is built from real frames.
 
-Lorenzo may look at the originals: he is the one who releases images.
+Two roles take part. The reviewer may look at the originals and is the one who releases images.
+The assistant, in general an AI agent, may not: what it looks at leaves the machine.
 
 ## Where the person comes in
 
-| # | When | What Lorenzo does | Cost |
+| # | When | What the reviewer does | Cost |
 |---|---|---|---|
 | L1 | Setup of a layout, once if the videos share the player frame | Opens `setup.png`, the median with the crop in green and the audience line in red, then confirms `setup.json` or corrects it (Paint.NET shows the cursor coordinates) | about 1 min |
 | L2 | Doubtful frames | Opens the frame in Paint.NET, hides what the pipeline missed, saves and approves, or rejects | about 1 min per frame |
 | L3 | Release | Answers yes or no on every `auto` frame, the ones the pipeline is confident about | about 2 s per frame |
-| L4 | Derived images: median, snapshots, frames asked for by the calibration | Same release, after Claude queues them with `review add` | about 2 s per image |
+| L4 | Derived images: median, snapshots, frames asked for by the calibration | Same release, after the assistant queues them with `review add` | about 2 s per image |
 | L5 | Judging the board snapshots | Answers «is the lecturer absent?». A yes releases the snapshot, a no is a leak label: the ground truth of the calibration | about 2 s per snapshot |
 | L6 | After the first video | Looks at how many `auto` frames needed fixing and how many doubts came out, then decides whether to keep checking every `auto` frame or only a sample, and whether doubts need a cap (`--review-budget`) | one decision |
 | L7 | Already in place | Says «sì» to commits | — |
@@ -47,7 +48,7 @@ per doubtful frame. How many doubts a lecture produces will be known after the f
 
 0. **Setup (L1).** Without a confirmed `setup.json` the run proposes one and stops. The crop is the
    non-black area of the median frame (`core.io.content_box`), so the player bars stay out, including
-   the name in the Teams bar. `redact_below` starts empty. Lorenzo checks `setup.png`, corrects the
+   the name in the Teams bar. `redact_below` starts empty. The reviewer checks `setup.png`, corrects the
    values if needed and sets `confirmed` to true. One setup can serve several videos (`--setup`), and
    `vision-toolkit board --setup` reads the same file (`core.layout`).
 
@@ -77,7 +78,7 @@ per doubtful frame. How many doubts a lecture produces will be known after the f
    3. **Cap.** No cap by default. With `--review-budget N`, at most N episodes are queued, evenly
       spread in time.
    4. **Queue.** The chosen frames go to the `doubtful` group, already pixelated as far as the
-      pipeline could, so Lorenzo fixes only what is missing.
+      pipeline could, so the reviewer fixes only what is missing.
 5. **Confident frames** go to the `auto` group.
 
 ## Review queue
@@ -89,7 +90,7 @@ board snapshots and the future app all use it.
 <queue>/
   queue.jsonl              one line per addition: name, group, question, reasons, boxes, sha256, created
   todo/<group>/<name>.png  waiting for a decision; edit the file in place
-  approved/<name>.png      released: the only folder Claude reads
+  approved/<name>.png      released: the only folder the assistant reads
   rejected/<name>.png      discarded
 ```
 
@@ -120,7 +121,7 @@ section must:
   - approve or reject it with one key and move to the next item;
   - undo the last decision.
 
-  Lorenzo's proposal for the keys: Enter opens, y approves, n rejects.
+  Proposed keys: Enter opens, y approves, n rejects.
 - **say how much is left:** the items remaining and the minutes, at a minute per frame to fix and a
   few seconds per yes or no.
 
@@ -178,8 +179,8 @@ frame.
 
 - **Tests:** implemented and tested on synthetic videos with fake models.
 - **First real run, 2026-10-20:** the four lectures of 6, 8, 13 and 15 October, one frame every
-  300 s, with the shared setup (crop `0,68,1674,944`, audience line 690). Lorenzo approved every
-  `auto` frame without corrections. The doubts were:
+  300 s, with the shared setup (crop `0,68,1674,944`, audience line 690). Every `auto` frame
+  was approved without corrections. The doubts were:
   - the Teams title card in the first 3 s, now skipped with `--start 5`;
   - a stain that turned out to be the lecturer's trousers;
   - two harmless doubts;
@@ -189,4 +190,4 @@ frame.
 - **Fragile point:** the foreground is the difference from the median of the whole lecture. Writing
   that appears later is missing from that median and comes out as foreground; so can erasing the
   board, or a laptop screen that changes. A median over a time window would avoid it. A false doubt
-  costs Lorenzo a minute. A missed doubt is caught by the release (L3).
+  costs the reviewer a minute. A missed doubt is caught by the release (L3).

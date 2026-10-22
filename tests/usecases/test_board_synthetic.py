@@ -2,7 +2,7 @@
 End-to-end test on a synthetic video built from a real lecture frame.
 
 From the sample frame a background without the lecturer is derived (inpainting
-of her area), then a video is generated in which her silhouette moves in front of
+of the lecturer's area), then a video is generated in which that silhouette moves in front of
 the board. The reconstruction must return to the background, a single frame must not.
 The frame shows a real person: it stays in data/ (outside git) and without it the
 test is skipped.

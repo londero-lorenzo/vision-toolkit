@@ -130,4 +130,4 @@ with catalog.create("deeplab-v3", confidence=True) as deeplab:
 
 Code, docstrings, comments, CLI, notebooks, docs and CLAUDE.md are in English
 ([0004](decisions/0004-english.md)). Commits were already in English. The names of the local files in
-`data/` (for example `lezione_prova_cit_censured.png`) are Lorenzo's private data and stay as they are.
+`data/` (for example `lezione_prova_cit_censured.png`) are private data and stay as they are.

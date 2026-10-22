@@ -12,9 +12,9 @@ anyone.
 
 - English for code, identifiers, docstrings, comments, CLI help and messages, notebooks, tests, docs
   and CLAUDE.md. Commits stay in English, as conventional commits with a scope.
-- The names of Lorenzo's local data files (`data/frame/lezione_prova_cit_censured.png`, ...) are not
+- The names of the local data files (`data/frame/lezione_prova_cit_censured.png`, ...) are not
   renamed. They are private, outside git, and other tools may refer to them.
-- Conversations with Lorenzo stay in Italian. Only the repository content is in English.
+- Conversations with the maintainer stay in Italian. Only the repository content is in English.
 
 ## Consequences
 

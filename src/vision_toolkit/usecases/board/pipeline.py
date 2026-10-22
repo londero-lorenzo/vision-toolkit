@@ -44,7 +44,7 @@ class BoardOptions:
     pose_confidence: float | None = 0.1     # the pose model's min_confidence; None keeps the model's default
     fallback: bool = True                   # a person-shaped foreground blob when the pose finds nobody
     grow_mask: bool = True                  # add the foreground blobs touching the pose mask
-    track: float = 20.0                     # seconds the lecturer is followed through the foreground once the pose lost her
+    track: float = 20.0                     # seconds the lecturer is followed through the foreground once the pose lost the lecturer
     refine_model: str | None = None
     refine_labels: tuple = ("person",)
     models_dir: Path | None = None

@@ -137,8 +137,8 @@ def test_foreground_masks_the_lecturer_when_the_pose_misses(fake_pose, tmp_path)
 
 
 def test_lecturer_followed_through_the_foreground_once_lost(fake_pose, tmp_path):
-    # Her legs behind the desk, she is no standing shape; she walks into the pose's
-    # blind spot and stays there for 5 s
+    # With the legs behind the desk, the lecturer is no standing shape; the lecturer
+    # walks into the pose's blind spot and stays there for 5 s
     positions = [100, 500, 100, 500, 420, 340, 300, 300, 300, 300, 300, 500]
     path = write_video(tmp_path / "lost.mp4", [draw_person(draw_room(), cx, bottom=250) for cx in positions])
     options = dict(pose_model="blind-pose", redact_below=360, **FAST)
@@ -151,8 +151,8 @@ def test_lecturer_followed_through_the_foreground_once_lost(fake_pose, tmp_path)
 
 
 def test_upper_body_cut_off_from_the_legs_is_followed(fake_pose, tmp_path):
-    # A belt the colour of the board cuts her in two. In the pose's blind spot the
-    # standing shape holds only her legs, and her upper body stays in front of the board
+    # A belt the colour of the board cuts the lecturer in two. In the pose's blind spot
+    # the standing shape holds only the legs, and the upper body stays in front of the board
     def frame(cx):
         room = draw_person(draw_room(), cx)
         room[255:275, cx - 30:cx + 31] = draw_room()[255:275, cx - 30:cx + 31]

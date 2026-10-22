@@ -210,7 +210,7 @@ dataclasses in plain NumPy. Thanks to it, models and ops evolve independently.
   External packages add specs through the entry-point group `vision_toolkit.models`.
 
 **Belongs here:** one class per model family (`ImageSegmenter` serves every MediaPipe segmenter),
-plus the specs of the models we use.
+plus the specs of the models in use.
 
 **Does not belong here:** post-processing that would help any model of the task (drawing the
 skeleton, crop-and-refine), which goes to `ops`, and choosing which model a use case uses, which is
@@ -281,7 +281,7 @@ And in `anonymize/`:
 | Add a use case | `usecases/<name>/` with a pipeline and `cli.py` exposing `add_cli(subparsers)`. Append it to `USECASES` in `cli.py`, write `docs/usecases/<name>.md`, link it from the README | local | an end-to-end test on synthetic data in `tests/usecases/` |
 | Add an option | a field in the options dataclass and an argument in `cli.py`, with today's value as default | local | — |
 | Change a default model | change the default constant (e.g. `DEFAULT_POSE_MODEL`). Outputs may change: state it | outputs of that use case | rerun the synthetic comparison |
-| Change the output format (file names, `pointing.jsonl` keys) | the vault reads these files: agree it with Lorenzo first, then update `docs/usecases/<name>.md`, the migration guide and the pinned format in `tests/usecases/test_board_pipeline.py` | vault consumers | `test_board_pipeline.py` |
+| Change the output format (file names, `pointing.jsonl` keys) | the vault reads these files: agree it with the maintainer first, then update `docs/usecases/<name>.md`, the migration guide and the pinned format in `tests/usecases/test_board_pipeline.py` | vault consumers | `test_board_pipeline.py` |
 
 ### cli
 
