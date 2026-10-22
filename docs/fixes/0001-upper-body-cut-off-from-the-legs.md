@@ -58,7 +58,15 @@ to reach the blob above it, and covered none of the area.
   (`tests/usecases/test_board_pipeline.py`), a belt the colour of the board cuts the synthetic
   lecturer in two while the pose misses her. Without the fix, 8.1% of the final board is wrong; with
   it, less than 1%. All 135 tests pass.
-- **Still to do.** A run on the ten lectures, with its snapshots compared to the ones Lorenzo approved.
+- **On the ten lectures.** The pipeline ran again with the same setup on the ten lectures, and gave
+  406 snapshots, `board_final` included, against 407 before. 401 match, within 50 pixels, one that
+  was approved, and none matches the rejected one. The other 5 were judged by hand and all approved:
+  2 in the 13 October lecture at 8:41 and 3 in the 20 October lecture at 8:39, 63–1232 pixels from
+  the closest approved one. The mask's source changes in 7 of the 12,042 samples, between tracking
+  and nobody.
+- **The artefact.** In the 6 October lecture at 9:46, `board_00h18m08s.png` is gone. The snapshots
+  taken in its place, at 18:22, 19:16 and 20:00, match the approved one at 17:58 with no pixel
+  differing, and differ from the rejected one in about 4,300 pixels.
 
 ## Files
 
