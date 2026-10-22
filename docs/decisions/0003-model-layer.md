@@ -11,7 +11,7 @@ into `PersonSegmenter`:
 - the PASCAL VOC class `DEEPLAB_PERSON = 15`;
 - `--refine` as a switch for exactly one model.
 
-Lorenzo's requirement: DeepLab V3 must not preclude other models. The repository must host many
+The requirement: DeepLab V3 must not preclude other models. The repository must host many
 specialised models, for the same task (another segmenter next to DeepLab) and for other domains
 (detection, depth, OCR, tracking), on other backends (ONNX Runtime, PyTorch).
 

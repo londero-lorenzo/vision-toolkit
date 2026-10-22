@@ -102,14 +102,14 @@ From the first use case, valid beyond the board:
   [0004 English](docs/decisions/0004-english.md),
   [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md)
 - Use cases: [board without lecturer](docs/usecases/board.md), [anonymize](docs/usecases/anonymize.md)
-- [Fixes](docs/fixes/README.md): one note per correction to the code, and where the earlier ones are
-  written
+- [Fixes](docs/fixes/README.md): one note per correction to the code
 
 ## Status
 
 - The board use case is complete and has run on four real lectures: after one round of
-  corrections, Lorenzo found no artefact in its snapshots. Pointing is measured only on a synthetic
+  corrections, no artefact was found in its snapshots. Pointing is measured only on a synthetic
   video ([status](docs/usecases/board.md#status)).
-- The anonymize use case gives Claude frames of the real lectures only after Lorenzo's review
+- The anonymize use case releases frames of the real lectures to the assistant only after the
+  reviewer's approval
   ([status](docs/usecases/anonymize.md#status)).
 - Next: absorb `image-stitching` as the canvas use case.

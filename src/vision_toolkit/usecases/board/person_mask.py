@@ -42,7 +42,7 @@ class PersonMasker:
     On the real lectures the pose mask also misses whole stretches of the lecturer
     (a sleeve, the side turned away, a shadow) for tens of seconds, long enough to
     enter the board. What differs from the background and touches the mask belongs
-    to her: with grow, those foreground blobs join the mask.
+    to the lecturer: with grow, those foreground blobs join the mask.
 
     When the pose finds nobody and a background is given, the lecturer may still be
     there, seen from the side or in poor light: the mask is then the box of the
@@ -50,11 +50,11 @@ class PersonMasker:
     the same way. It has no pose, so no pointed spot.
 
     Given the previous frame's mask, the foreground blobs that touch it, `track_reach`
-    of the frame width around it, are taken for her too. In front of the board the
-    standing shape may hold only her legs: her upper body, light on the dark board,
-    is a blob of its own, cut off at the board's lower edge, and only these blobs
-    reach it. At the edge of the frame she is partly out of view and what shows of
-    her is no standing shape: these blobs are then the whole mask.
+    of the frame width around it, are taken for the lecturer too. In front of the
+    board the standing shape may hold only the legs: the upper body, light on the
+    dark board, is a blob of its own, cut off at the board's lower edge, and only
+    these blobs reach it. At the edge of the frame the lecturer is partly out of
+    view and what shows is no standing shape: these blobs are then the whole mask.
     """
 
     def __init__(self, pose_model=DEFAULT_POSE_MODEL, refine_model=None, refine_labels=("person",),
@@ -93,7 +93,7 @@ class PersonMasker:
         floor: the row where the lecturer's blob ends, the audience line; the frame
         bottom by default.
         previous: the mask of the frame before, to follow the lecturer through the
-        foreground when the pose does not find her.
+        foreground when the pose does not find the lecturer.
         """
         mask = np.zeros(frame.shape[:2], np.uint8)
         poses = self.pose(frame)

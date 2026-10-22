@@ -10,14 +10,14 @@ pluggable, picked by name from a catalog.
 - First use case, implemented: **board without lecturer** (`vision-toolkit board`). From lecture
   videos it removes the lecturer, saves a clean board snapshot at every change and logs the pointed
   spot with its timestamp. Page: `docs/usecases/board.md`. It was calibrated blind on the four real
-  lectures. Lorenzo judged its snapshots (L5): no person, 21 artefacts in 189, whose causes are
-  corrected; on the corrected run he found none. On six more lectures he found 1 in 245, corrected
-  in `docs/fixes/0001-upper-body-cut-off-from-the-legs.md`. Pointing is right in 7 frames out of 10
+  lectures. Its snapshots were judged by hand (L5): no person, 21 artefacts in 189, whose causes are
+  corrected; none was found on the corrected run. On six more lectures 1 in 245 was found, corrected
+  in `docs/fixes/0017-upper-body-cut-off-from-the-legs.md`. Pointing is right in 7 frames out of 10
   on the synthetic video, and is not measured on the real lectures.
 - Second use case, implemented: **anonymize** (`vision-toolkit anonymize`). It pixelates the faces in
-  frames of a video and puts the frames in a review queue for Lorenzo. Page:
+  frames of a video and puts the frames in a review queue for the reviewer. Page:
   `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on
-  the four real lectures, and Lorenzo approved every frame. Its doubt thresholds are still open (L6).
+  the four real lectures, and every frame was approved. Its doubt thresholds are still open (L6).
 - Next step: absorb `D:\Programmazione\Projects\image-stitching` as the `canvas` use case. Where it
   lands (a registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is
   in `docs/architecture.md`.
@@ -44,23 +44,34 @@ record in `docs/decisions/`, in the existing format.
 Board output format: snapshots `board_<hh>h<mm>m<ss>s.png`, `board_final.png`, `median.png`,
 `quad.json` (key `quad`) and `pointing.jsonl` (keys `t, frame_xy, board_xy, board_xy_norm,
 arm_angle, occluded_fraction, snapshot`). The vault reads it, and `tests/usecases/test_board_pipeline.py`
-pins it. Any change must be agreed with Lorenzo first. `run.json` records what a run measured and
+pins it. Any change must be agreed with the maintainer first. `run.json` records what a run measured and
 decided; the vault does not read it.
+
+## Roles
+
+- **The maintainer** owns the repository: says «sì» to commits, agrees changes to the output format
+  and to the environment, and decides what is in scope.
+- **The reviewer** may see the lecture videos and releases images from a review queue (L1–L6 in
+  `docs/usecases/anonymize.md`).
+- **The assistant** is, in general, an AI agent working on the repository. What it looks at leaves
+  the machine, so it never sees an original frame.
+
+For now the maintainer and the reviewer are the same person. The documents keep the roles apart.
 
 ## Data
 
 - `data/`, `models/` and `output/`, as well as images and videos, are outside git (`.gitignore`).
   Lecture frames show a real person: they are never committed, published or attached to issues and PRs.
-- Claude processes the lecture videos but never opens them. It looks only at images in the `approved/`
-  folder of a review queue, released by Lorenzo, and at images with no person by construction (binary
-  masks, skeletons on black). To see the median, a snapshot or `setup.png`, Claude first puts it in a
+- The assistant processes the lecture videos but never opens them. It looks only at images in the `approved/`
+  folder of a review queue, released by the reviewer, and at images with no person by construction (binary
+  masks, skeletons on black). To see the median, a snapshot or `setup.png`, the assistant first puts it in a
   queue with `vision-toolkit review add` (`docs/usecases/anonymize.md`, privacy protocol).
 - Notebooks are committed **without output**.
 - Public tests and examples use synthetic data (`tests/fakes.py`).
 - `tests/usecases/test_board_synthetic.py` needs `data/frame/lezione_prova_cit_censured.png` and is
   skipped without it.
 - The university vault `D:\Uniud\ms-aics` provides the sources and is **out of scope**: read it only
-  if Lorenzo asks, never write to it.
+  if the maintainer asks, never write to it.
 
 ## Environment
 
@@ -68,7 +79,7 @@ decided; the vault does not read it.
 - Versions: Python 3.12, OpenCV 5.0, NumPy 2.x, MediaPipe Tasks 1.1.1.
 - CPU only. The GPU (GTX 1050 Ti, 4 GB) is not used.
 - `mediapipe` requires `opencv-contrib-python`, while the core declares `opencv-python`. Both install
-  the same `cv2` module, which is why the environment has both. Do not change this without Lorenzo.
+  the same `cv2` module, which is why the environment has both. Do not change this without the maintainer.
 
 ```
 py -m venv .env
@@ -86,15 +97,19 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
 ## Conventions
 
 - **Language:** English everywhere: code, docstrings, comments, CLI, notebooks, docs, this file
-  (`docs/decisions/0004-english.md`). Conversations with Lorenzo are in Italian. Commits are in English,
+  (`docs/decisions/0004-english.md`). Conversations with the maintainer are in Italian. Commits are in English,
   as conventional commits with a scope (`feat(models): ...`), like in `image-stitching`.
-- **Git:** no commit without Lorenzo's «sì». Propose the files and the message, then wait. Commits carry
-  Claude's `Co-Authored-By` line. Add files by name, never `git add -A`. Never `push --force` or
+- **Impersonal form:** documents, code and comments name roles (the maintainer, the reviewer, the
+  assistant), never a person, and use no "I/we". The lecturer is "the lecturer", with no pronoun.
+- **Git:** no commit without the maintainer's «sì». Propose the files and the message, then wait.
+  Commits carry the assistant's `Co-Authored-By` line. Add files by name, never `git add -A`. Never `push --force` or
   `--no-verify`. No remote and no `gh repo create` without confirmation.
+  Nothing has been pushed yet: the history can still be analysed and its commits changed with a
+  rebase, with the maintainer's agreement. Once pushed, it no longer can.
 - **Fixes:** every correction to the code gets a note in `docs/fixes/` (`NNNN-<slug>.md`, in the format
-  of 0001). The note says what went wrong and how it showed, the cause, what changed and how it was
+  of 0017). The note says what went wrong and how it showed, the cause, what changed and how it was
   verified. It goes in the same commit as the fix, with its row in `docs/fixes/README.md`, and the
-  commit message names it. The 16 corrections before 2026-10-22 have no note; their state is in
-  that README.
-- The context of the session that created the repo (experiments, figures, reasons) is in Claude's
+  commit message names it. Notes 0001–0016 were written after the fact, on 2026-10-22, for the
+  corrections made before the notes started.
+- The context of the session that created the repo (experiments, figures, reasons) is in the assistant's
   memory for this project.
