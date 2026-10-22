@@ -51,7 +51,9 @@ Larger choices still get a decision record in `../decisions/`.
 
 The notes started on 2026-10-22 with the fix now numbered 0017. Notes 0001–0016 were written the same
 day for the corrections made before, and the numbers were reassigned in time order. The commit message
-of `17232eb` therefore names its note as 0001.
+of `17232eb` therefore names its note as 0001. The messages are corrected, and the commits before
+the notes name theirs, in a rebase before the first push ("Before the first push" in `CLAUDE.md`).
+The hashes in this folder change with it.
 
 The earlier notes draw on the commit messages, on `docs/usecases/board.md` and on the figures of the
 calibration runs:

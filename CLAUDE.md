@@ -106,6 +106,16 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
   `--no-verify`. No remote and no `gh repo create` without confirmation.
   Nothing has been pushed yet: the history can still be analysed and its commits changed with a
   rebase, with the maintainer's agreement. Once pushed, it no longer can.
+- **Before the first push:** once `docs/impersonal-form` is merged into `main`, the commit messages
+  are rewritten in one rebase, with the maintainer's agreement:
+  - `7ecc290` and `17232eb`: the lecturer with no pronoun;
+  - `17232eb` and `6652c37`: the note they call 0001 is now 0017;
+  - `e638f6d`, `7ecc290` and `2bfeec1`: name their notes (0001–0010, 0011–0015, 0016);
+  - any other commit, the merged ones included, that names a person or uses "I/we": `git log` is
+    checked again after the merge.
+
+  The rebase changes every hash from `e638f6d` on. `docs/fixes/` cites them (each note and the table
+  in its README), so the citations are updated after the rebase. This item is then removed.
 - **Fixes:** every correction to the code gets a note in `docs/fixes/` (`NNNN-<slug>.md`, in the format
   of 0017). The note says what went wrong and how it showed, the cause, what changed and how it was
   verified. It goes in the same commit as the fix, with its row in `docs/fixes/README.md`, and the
