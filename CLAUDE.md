@@ -12,8 +12,9 @@ pluggable, picked by name from a catalog.
   spot with its timestamp. Page: `docs/usecases/board.md`. It was calibrated blind on the four real
   lectures. Its snapshots were judged by hand (L5): no person, 21 artefacts in 189, whose causes are
   corrected; none was found on the corrected run. On six more lectures 1 in 245 was found, corrected
-  in `docs/fixes/0017-upper-body-cut-off-from-the-legs.md`. Pointing is right in 7 frames out of 10
-  on the synthetic video, and is not measured on the real lectures.
+  in `docs/fixes/0017-upper-body-cut-off-from-the-legs.md`; none was found on the corrected run of
+  all ten lectures. Pointing is right in 7 frames out of 10 on the synthetic video, and is not
+  measured on the real lectures.
 - Second use case, implemented: **anonymize** (`vision-toolkit anonymize`). It pixelates the faces in
   frames of a video and puts the frames in a review queue for the reviewer. Page:
   `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on
@@ -106,16 +107,17 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
   `--no-verify`. No remote and no `gh repo create` without confirmation.
   Nothing has been pushed yet: the history can still be analysed and its commits changed with a
   rebase, with the maintainer's agreement. Once pushed, it no longer can.
-- **Before the first push:** once `docs/impersonal-form` is merged into `main`, the commit messages
-  are rewritten in one rebase, with the maintainer's agreement:
+- **Before the first push:** `docs/impersonal-form` is merged into `main`, so the commit messages
+  can be rewritten in one pass, with the maintainer's agreement:
   - `7ecc290` and `17232eb`: the lecturer with no pronoun;
   - `17232eb` and `6652c37`: the note they call 0001 is now 0017;
-  - `e638f6d`, `7ecc290` and `2bfeec1`: name their notes (0001–0010, 0011–0015, 0016);
-  - any other commit, the merged ones included, that names a person or uses "I/we": `git log` is
-    checked again after the merge.
+  - `e638f6d`, `7ecc290` and `2bfeec1`: name their notes (0001–0010, 0011–0015, 0016).
 
-  The rebase changes every hash from `e638f6d` on. `docs/fixes/` cites them (each note and the table
-  in its README), so the citations are updated after the rebase. This item is then removed.
+  After the merge, `git log` names no other person and has no "I/we". The history holds a merge,
+  so only the messages are rewritten (`git filter-branch --msg-filter`): a rebase would replay the
+  merge and its conflict on 0017. The rewrite changes every hash from `e638f6d` on. `docs/fixes/`
+  cites them (each note and the table in its README), so the citations are updated after the
+  rewrite. This item is then removed.
 - **Fixes:** every correction to the code gets a note in `docs/fixes/` (`NNNN-<slug>.md`, in the format
   of 0017). The note says what went wrong and how it showed, the cause, what changed and how it was
   verified. It goes in the same commit as the fix, with its row in `docs/fixes/README.md`, and the

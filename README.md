@@ -106,7 +106,7 @@ From the first use case, valid beyond the board:
 
 ## Status
 
-- The board use case is complete and has run on four real lectures: after one round of
+- The board use case is complete and has run on ten real lectures: after two rounds of
   corrections, no artefact was found in its snapshots. Pointing is measured only on a synthetic
   video ([status](docs/usecases/board.md#status)).
 - The anonymize use case releases frames of the real lectures to the assistant only after the

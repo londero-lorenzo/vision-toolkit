@@ -189,6 +189,11 @@ October. Their 245 snapshots were judged by hand: no person, and one artefact. I
 shape held only the lecturer's legs, and the upper body entered the median. Cause and fix are in
 [fix 0017](../fixes/0017-upper-body-cut-off-from-the-legs.md).
 
+The corrected pipeline then ran again on all ten lectures. 401 of the 406 snapshots match, within
+50 pixels, an approved one, and none matches the rejected one. The other 5 were judged and all
+approved. In place of the patch, the snapshots at 18 min 22 s, 19 min 16 s and 20 min match the
+approved one at 17 min 58 s.
+
 Three recordings stay out of these runs:
 - two lectures of 1 October, filmed by the lecturer's laptop camera, which is moved by hand. They
   are kept for when a moving camera is handled;
@@ -263,7 +268,8 @@ The pipeline is complete. It was calibrated blind on four real lectures, and its
 judged by hand (L5 in [anonymize](anonymize.md#where-the-person-comes-in)): no person, 21 artefacts in
 189, whose causes are corrected (see above). No artefact was found on the corrected run. On six
 more lectures one in 245 was found, whose cause is corrected in
-[fix 0017](../fixes/0017-upper-body-cut-off-from-the-legs.md).
+[fix 0017](../fixes/0017-upper-body-cut-off-from-the-legs.md). None was found on the corrected run
+of all ten lectures.
 
 Known problems:
 - on the synthetic video the pointed spot is right in 7 frames out of 10. In one the hand leaves the
