@@ -19,3 +19,6 @@
 *.jpg
 *.mp4
 *.pdn
+
+# exclude the local folder of the assistant (worktrees, settings)
+.claude/
