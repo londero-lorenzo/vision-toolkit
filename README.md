@@ -25,7 +25,8 @@ src/vision_toolkit/
   cli.py       `vision-toolkit <command>`
 tests/         mirrors the layers; synthetic data, plus one test on a private frame
 notebooks/     explorations (01 single frame, 02 temporal reconstruction)
-docs/          architecture, migration guide, decisions, fix notes, one page per use case
+docs/          architecture, migration guide, decisions, fix notes, licensing, one page per use case
+scripts/       check_licenses.py
 data/          frames, videos, calibration (outside git)
 models/        downloaded model files (outside git)
 output/        results (outside git)
@@ -101,10 +102,19 @@ From the first use case, valid beyond the board:
   [0003 model layer](docs/decisions/0003-model-layer.md),
   [0004 English](docs/decisions/0004-english.md),
   [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md),
-  [0006 data names](docs/decisions/0006-data-names.md)
+  [0006 data names](docs/decisions/0006-data-names.md),
+  [0007 Apache-2.0 licence](docs/decisions/0007-apache-2.0-licence.md)
 - Use cases: [board without lecturer](docs/usecases/board.md), [anonymize](docs/usecases/anonymize.md)
 - [Fixes](docs/fixes/README.md): one note per correction to the code
 - [Roadmap](docs/roadmap.md): the work left, split into sessions
+- [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [licensing](docs/licensing.md)
+
+## Licence
+
+Apache License 2.0: see [LICENSE](LICENSE) and [NOTICE](NOTICE). The model files that
+`vision-toolkit models download` fetches keep their own licences, listed in
+[docs/licensing.md](docs/licensing.md). Contributions are accepted under the same licence, without a
+CLA ([CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## Status
 

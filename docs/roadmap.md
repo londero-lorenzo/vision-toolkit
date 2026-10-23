@@ -34,6 +34,7 @@ commit on, and an open branch would have to be moved onto the new history by han
   updated, and the item in `CLAUDE.md` is removed.
 - **The remote:** the GitHub repository is created and the history pushed, with the maintainer's
   confirmation.
+  Private vulnerability reporting is turned on in its settings, as `SECURITY.md` expects.
 
 ## 2. Board: pointing on the real lectures
 

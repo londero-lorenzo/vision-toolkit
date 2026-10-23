@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=65.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,7 @@ name = "vision-toolkit"
 version = "0.1.0"
 description = "Image and video processing toolkit: reusable layers (core, tasks, models, ops) and use cases built on them"
 authors = [{ name = "Lorenzo Londero" }]
+license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

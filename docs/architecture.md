@@ -220,14 +220,18 @@ the use case's default.
 
 | Change | How | Blast radius | Tests |
 |---|---|---|---|
-| Add a model that an existing class already handles (e.g. PoseLandmarker *full*, another MediaPipe segmenter) | add a `ModelSpec` to `BUILTIN` | none | the catalog consistency test covers it |
-| Add a model that needs a new class (e.g. an ONNX SAM as a segmenter) | `models/<backend>/<model>.py` with a class satisfying the task Protocol (subclass `tasks.base.Model`), plus a `ModelSpec`. Use cases pick it by name (`--refine-model sam`) | local | contract test in `tests/models/`, skipped without files or extra |
+| Add a model that an existing class already handles (e.g. PoseLandmarker *full*, another MediaPipe segmenter) | add a `ModelSpec` to `BUILTIN`, and its licence to `docs/licensing.md` | none | the catalog consistency test covers it |
+| Add a model that needs a new class (e.g. an ONNX SAM as a segmenter) | `models/<backend>/<model>.py` with a class satisfying the task Protocol (subclass `tasks.base.Model`), plus a `ModelSpec` and its licence in `docs/licensing.md`. Use cases pick it by name (`--refine-model sam`) | local | contract test in `tests/models/`, skipped without files or extra |
 | Add a backend (ONNX Runtime, PyTorch) | `models/<backend>/` with a `_common.py` for conversions; a pip extra in `[project.optional-dependencies]`; the library in `BACKEND_LIBRARIES` in `tests/test_layers.py` | none for users without the extra | `pytest.importorskip("<library>")` |
 | Upgrade a model file | change URL and file name in the spec. If labels or keypoints change, check the ops and use cases that name them | users re-run `models download` | contract test |
 | Rename or remove a model | breaking for CLI users and scripts: write it in the migration guide | users of that name | — |
 | Ship models from another package | in that package: `[project.entry-points."vision_toolkit.models"] my-models = "my_pkg.specs:SPECS"` (a spec, a list of specs or a callable returning them) | none in this repo | — |
 
 A broken plugin is skipped with a warning, so it never breaks the built-in models.
+
+The catalog holds only models whose licence allows any use, commercial use included. Models under
+copyleft or non-commercial licences ship from separate packages through the entry points
+([licensing](licensing.md), [0007](decisions/0007-apache-2.0-licence.md)).
 
 ### ops
 
@@ -338,6 +342,7 @@ Because use cases reach models only by name, the split is a move of files, not a
 - [0004](decisions/0004-english.md): English everywhere
 - [0005](decisions/0005-anonymized-frames.md): frames leave the machine only through a person's review
 - [0006](decisions/0006-data-names.md): English names for the local data, one scheme for data/ and output/
+- [0007](decisions/0007-apache-2.0-licence.md): Apache-2.0 licence
 
 ## Fixes
 

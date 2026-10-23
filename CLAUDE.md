@@ -128,6 +128,11 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
   every hash, from the first commit `848ce89` on. `docs/fixes/`
   cites them (each note and the table in its README), so the citations are updated after the
   rewrite. This item is then removed.
+- **Licence:** Apache-2.0 (`docs/decisions/0007-apache-2.0-licence.md`). Dependencies with permissive
+  licences only (`scripts/check_licenses.py`); LGPL only as listed in `docs/licensing.md`. GPL and AGPL
+  libraries, and models under copyleft or non-commercial licences, go in separate packages through the
+  `vision_toolkit.models` entry points. A model added to the catalog gets its row in `docs/licensing.md`.
+  Contributors follow `CONTRIBUTING.md`.
 - **Fixes:** every correction to the code gets a note in `docs/fixes/` (`NNNN-<slug>.md`, in the format
   of 0017). The note says what went wrong and how it showed, the cause, what changed and how it was
   verified. It goes in the same commit as the fix, with its row in `docs/fixes/README.md`, and the
