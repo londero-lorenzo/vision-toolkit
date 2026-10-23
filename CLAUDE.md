@@ -19,9 +19,11 @@ pluggable, picked by name from a catalog.
   frames of a video and puts the frames in a review queue for the reviewer. Page:
   `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on
   the four real lectures, and every frame was approved. Its doubt thresholds are still open (L6).
-- Next step: absorb `D:\Programmazione\Projects\image-stitching` as the `canvas` use case. Where it
-  lands (a registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is
-  in `docs/architecture.md`.
+- What is left is split into sessions in `docs/roadmap.md`: first the history rewrite before the
+  first push, then pointing on the real lectures, the anonymize thresholds and the `canvas` use
+  case, which absorbs `D:\Programmazione\Projects\image-stitching`. Where `canvas` lands (a
+  registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is in
+  `docs/architecture.md`.
 
 ## Layout
 
@@ -105,8 +107,9 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
 - **Git:** no commit without the maintainer's «sì». Propose the files and the message, then wait.
   Commits carry the assistant's `Co-Authored-By` line. Add files by name, never `git add -A`. Never `push --force` or
   `--no-verify`. No remote and no `gh repo create` without confirmation.
-  Nothing has been pushed yet: the history can still be analysed and its commits changed with a
-  rebase, with the maintainer's agreement. Once pushed, it no longer can.
+  Nothing has been pushed yet, and there is no remote: the GitHub repository is created once
+  session 1 of `docs/roadmap.md` is done. Until then the history can still be analysed and its
+  commits changed, with the maintainer's agreement. Once pushed, it no longer can.
 - **Before the first push:** `docs/impersonal-form` is merged into `main`, so the commit messages
   can be rewritten in one pass, with the maintainer's agreement:
   - `7ecc290` and `17232eb`: the lecturer with no pronoun;

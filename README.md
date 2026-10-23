@@ -103,6 +103,7 @@ From the first use case, valid beyond the board:
   [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md)
 - Use cases: [board without lecturer](docs/usecases/board.md), [anonymize](docs/usecases/anonymize.md)
 - [Fixes](docs/fixes/README.md): one note per correction to the code
+- [Roadmap](docs/roadmap.md): the work left, split into sessions
 
 ## Status
 
@@ -112,4 +113,5 @@ From the first use case, valid beyond the board:
 - The anonymize use case releases frames of the real lectures to the assistant only after the
   reviewer's approval
   ([status](docs/usecases/anonymize.md#status)).
-- Next: absorb `image-stitching` as the canvas use case.
+- Next: the sessions of the [roadmap](docs/roadmap.md). The first rewrites the commit messages,
+  and the repository goes on GitHub after it.
