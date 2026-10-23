@@ -21,13 +21,15 @@ done, with the maintainer's confirmation, and the first push follows.
 
 ## 1. History rewrite before the first push
 
-Short. It runs alone, with no other branch open: the rewrite changes every hash from `e638f6d` on,
-and an open branch would have to be moved onto the new history by hand.
+Short. It runs alone, with no other branch open: the rewrite changes every hash, from the first
+commit on, and an open branch would have to be moved onto the new history by hand.
 
 - **Before it:** the branch `docs/impersonal-form` and its worktree
   `.claude/worktrees/impersonal-docs` are deleted. Both are merged into `main`.
 - **The messages:** the commits listed in "Before the first push" in `CLAUDE.md` are rewritten with
   `git filter-branch --msg-filter`. A rebase would replay the merge and its conflict on 0017.
+- **The notebook:** in the same pass, `--index-filter` replaces in every commit the path that names
+  the lecturer in notebook 01 with `data/calibration/sample_arm.png` (decision 0006).
 - **The citations:** the hashes in `docs/fixes/` (each note and the table in its README) are
   updated, and the item in `CLAUDE.md` is removed.
 - **The remote:** the GitHub repository is created and the history pushed, with the maintainer's
@@ -95,6 +97,4 @@ jump. This waits until the sessions above are done.
 
 With the maintainer's confirmation:
 - `output/board_v1/` and `output/board_v3/` hold superseded runs. `output/board/`,
-  `output/board_v2/` and `output/board_v5/` stay, as the references for comparing snapshots;
-- `data/video/` holds a second copy of the 6 October lecture at 8:45, identical byte for byte to
-  the one already processed.
+  `output/board_v2/` and `output/board_v5/` stay, as the references for comparing snapshots.

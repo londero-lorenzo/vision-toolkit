@@ -23,7 +23,7 @@ on the originals.
    - images in the `approved/` folder of a review queue, put there by the reviewer;
    - images that contain no person by construction: binary masks, skeletons on black.
 4. **Every other image derived from the originals goes through a queue.** This covers the median, the
-   board snapshots, `setup.png`, frames asked for by the calibration, and `data/video/sintetico.mp4`,
+   board snapshots, `setup.png`, frames asked for by the calibration, and `data/video/synthetic.mp4`,
    which is built from real frames.
 
 Two roles take part. The reviewer may look at the originals and is the one who releases images.

@@ -20,7 +20,7 @@ from vision_toolkit.usecases.board.detect import detect_board
 from vision_toolkit.usecases.board.person_mask import PersonMasker
 
 ROOT = Path(__file__).resolve().parents[2]
-FRAME = ROOT / "data" / "frame" / "lezione_prova_cit_censured.png"
+FRAME = ROOT / "data" / "frame" / "sample_censored.png"
 VIDEO_CROP = (0, 68, 1674, 783)  # video area in the player screenshot
 OFFSETS = [0, 250, 500, 750, 1000, 750, 500, 250, 0, -250]
 

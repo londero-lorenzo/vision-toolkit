@@ -204,7 +204,7 @@ Three recordings stay out of these runs:
 
 ```
 vision-toolkit models download                 # once: model files into models/
-vision-toolkit board data/video/lezione.mp4 --setup output/anonymized/lezione/setup.json
+vision-toolkit board data/video/lecture.mp4 --setup output/anonymized/lecture/setup.json
 ```
 
 Main options:

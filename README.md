@@ -78,7 +78,7 @@ The core needs only OpenCV and NumPy. Each model backend is a pip extra (`mediap
 Without an extra, only the models that need it fail, and the message names the extra to install.
 
 The tests use synthetic data. `tests/usecases/test_board_synthetic.py` also needs a private lecture
-frame (`data/frame/lezione_prova_cit_censured.png`) and is skipped without it. Lecture frames show a
+frame (`data/frame/sample_censored.png`) and is skipped without it. Lecture frames show a
 real person: they are never committed or published.
 
 ## Lessons that generalise
@@ -100,7 +100,8 @@ From the first use case, valid beyond the board:
   [0002 single package](docs/decisions/0002-single-package.md),
   [0003 model layer](docs/decisions/0003-model-layer.md),
   [0004 English](docs/decisions/0004-english.md),
-  [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md)
+  [0005 anonymized frames](docs/decisions/0005-anonymized-frames.md),
+  [0006 data names](docs/decisions/0006-data-names.md)
 - Use cases: [board without lecturer](docs/usecases/board.md), [anonymize](docs/usecases/anonymize.md)
 - [Fixes](docs/fixes/README.md): one note per correction to the code
 - [Roadmap](docs/roadmap.md): the work left, split into sessions
@@ -113,5 +114,5 @@ From the first use case, valid beyond the board:
 - The anonymize use case releases frames of the real lectures to the assistant only after the
   reviewer's approval
   ([status](docs/usecases/anonymize.md#status)).
-- Next: the sessions of the [roadmap](docs/roadmap.md). The first rewrites the commit messages,
-  and the repository goes on GitHub after it.
+- Next: the sessions of the [roadmap](docs/roadmap.md). The first rewrites the history (the commit
+  messages and one notebook line), and the repository goes on GitHub after it.

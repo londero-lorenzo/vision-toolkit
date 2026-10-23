@@ -69,9 +69,12 @@ For now the maintainer and the reviewer are the same person. The documents keep 
   folder of a review queue, released by the reviewer, and at images with no person by construction (binary
   masks, skeletons on black). To see the median, a snapshot or `setup.png`, the assistant first puts it in a
   queue with `vision-toolkit review add` (`docs/usecases/anonymize.md`, privacy protocol).
+- Names in `data/` and `output/` follow `docs/decisions/0006-data-names.md`: English, lower case, `_`,
+  no spaces, never who appears. Recordings are `data/video/lecture_<YYYYMMDD>_<HHMMSS>.mp4`, and each
+  output folder takes the name of its input.
 - Notebooks are committed **without output**.
 - Public tests and examples use synthetic data (`tests/fakes.py`).
-- `tests/usecases/test_board_synthetic.py` needs `data/frame/lezione_prova_cit_censured.png` and is
+- `tests/usecases/test_board_synthetic.py` needs `data/frame/sample_censored.png` and is
   skipped without it.
 - The university vault `D:\Uniud\ms-aics` provides the sources and is **out of scope**: read it only
   if the maintainer asks, never write to it.
@@ -110,15 +113,19 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
   Nothing has been pushed yet, and there is no remote: the GitHub repository is created once
   session 1 of `docs/roadmap.md` is done. Until then the history can still be analysed and its
   commits changed, with the maintainer's agreement. Once pushed, it no longer can.
-- **Before the first push:** `docs/impersonal-form` is merged into `main`, so the commit messages
-  can be rewritten in one pass, with the maintainer's agreement:
+- **Before the first push:** `docs/impersonal-form` is merged into `main`, so the history can be
+  rewritten in one pass, with the maintainer's agreement:
   - `7ecc290` and `17232eb`: the lecturer with no pronoun;
   - `17232eb` and `6652c37`: the note they call 0001 is now 0017;
-  - `e638f6d`, `7ecc290` and `2bfeec1`: name their notes (0001–0010, 0011–0015, 0016).
+  - `e638f6d`, `7ecc290` and `2bfeec1`: name their notes (0001–0010, 0011–0015, 0016);
+  - `notebooks/01_single_frame.ipynb` (`01_frame_singolo.ipynb` in `848ce89`), in every commit:
+    the path of the arm crop named after the lecturer becomes `data/calibration/sample_arm.png`
+    (decision 0006).
 
   After the merge, `git log` names no other person and has no "I/we". The history holds a merge,
-  so only the messages are rewritten (`git filter-branch --msg-filter`): a rebase would replay the
-  merge and its conflict on 0017. The rewrite changes every hash from `e638f6d` on. `docs/fixes/`
+  so the messages and that notebook line are rewritten with `git filter-branch --msg-filter` and
+  `--index-filter`: a rebase would replay the merge and its conflict on 0017. The rewrite changes
+  every hash, from the first commit `848ce89` on. `docs/fixes/`
   cites them (each note and the table in its README), so the citations are updated after the
   rewrite. This item is then removed.
 - **Fixes:** every correction to the code gets a note in `docs/fixes/` (`NNNN-<slug>.md`, in the format

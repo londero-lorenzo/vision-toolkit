@@ -52,7 +52,7 @@ Unchanged, in `output/<video name>/`:
 - `pointing.jsonl` with the keys `t, frame_xy, board_xy, board_xy_norm, arm_angle,
   occluded_fraction, snapshot`.
 
-Checked on `data/video/sintetico.mp4`. With the default options, `vision-toolkit board` writes files
+Checked on `data/video/synthetic.mp4`. With the default options, `vision-toolkit board` writes files
 byte-identical to those of the old `lavagna`, and the same holds for `--refine-model deeplab-v3`
 against `--refine`.
 
@@ -129,5 +129,6 @@ with catalog.create("deeplab-v3", confidence=True) as deeplab:
 ## 6. Language
 
 Code, docstrings, comments, CLI, notebooks, docs and CLAUDE.md are in English
-([0004](decisions/0004-english.md)). Commits were already in English. The names of the local files in
-`data/` (for example `lezione_prova_cit_censured.png`) are private data and stay as they are.
+([0004](decisions/0004-english.md)). Commits were already in English. The local files in `data/` kept
+their Italian names until 2026-10-23, when they were renamed too ([0006](decisions/0006-data-names.md)):
+for example `lezione_prova_cit_censured.png` became `sample_censored.png`.

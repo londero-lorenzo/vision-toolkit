@@ -337,6 +337,7 @@ Because use cases reach models only by name, the split is a move of files, not a
 - [0003](decisions/0003-model-layer.md): tasks, models, catalog and ops
 - [0004](decisions/0004-english.md): English everywhere
 - [0005](decisions/0005-anonymized-frames.md): frames leave the machine only through a person's review
+- [0006](decisions/0006-data-names.md): English names for the local data, one scheme for data/ and output/
 
 ## Fixes
 

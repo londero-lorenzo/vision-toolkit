@@ -9,7 +9,7 @@ recorded from the Teams player, so that the assistant can see the angles, the li
 frames show the lecturer and the students, who have not agreed to be shown, and sending a frame to
 the assistant means sending it out of the machine.
 
-36 frames were first censored by hand (`data/video/censured`), blurring the face. That does not
+36 frames were first censored by hand (`data/frame/censored/`), blurring the face. That does not
 scale to whole lectures. It also left the lecturer's name readable in the Teams bar. The idea of
 masking faces with a black rectangle raised a doubt: the models need to see the face.
 
