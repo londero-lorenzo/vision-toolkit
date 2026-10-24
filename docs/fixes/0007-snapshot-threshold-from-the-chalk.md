@@ -1,7 +1,7 @@
 # 0007: The snapshot threshold follows the chalk of the video
 
 Date: 2026-10-20. Use case: board (`usecases/board/chalk.py`, `usecases/board/pipeline.py`).
-Commit `e638f6d`. Note written after the fact, on 2026-10-22.
+Commit `910b474`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

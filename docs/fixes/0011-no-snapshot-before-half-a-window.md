@@ -1,7 +1,7 @@
 # 0011: No snapshot before the median holds half a window
 
 Date: 2026-10-21. Use case: board (`usecases/board/pipeline.py`).
-Commit `7ecc290`. Note written after the fact, on 2026-10-22.
+Commit `99f0cce`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

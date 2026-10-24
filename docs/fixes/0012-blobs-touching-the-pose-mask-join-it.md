@@ -1,7 +1,7 @@
 # 0012: The foreground blobs touching the pose mask join it
 
 Date: 2026-10-21. Use case: board (`core/foreground.py`, `usecases/board/person_mask.py`).
-Commit `7ecc290`. Note written after the fact, on 2026-10-22.
+Commit `99f0cce`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

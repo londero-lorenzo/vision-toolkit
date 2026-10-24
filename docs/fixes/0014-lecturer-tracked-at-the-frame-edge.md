@@ -1,7 +1,7 @@
 # 0014: The lecturer is followed through the foreground at the edge of the frame
 
 Date: 2026-10-21. Use case: board (`usecases/board/person_mask.py`, `usecases/board/pipeline.py`).
-Commit `7ecc290`. Note written after the fact, on 2026-10-22.
+Commit `99f0cce`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

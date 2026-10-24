@@ -1,7 +1,7 @@
 # 0003: A foreground blob shaped like a standing person masks the lecturer when the pose misses
 
 Date: 2026-10-20. Use case: board (`usecases/board/person_mask.py`, `core/foreground.py`).
-Commit `e638f6d`. Note written after the fact, on 2026-10-22.
+Commit `910b474`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

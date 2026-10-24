@@ -1,7 +1,7 @@
 # 0009: The video is split into framing segments
 
 Date: 2026-10-20. Use case: board (`core/framing.py`, `usecases/board/pipeline.py`).
-Commit `e638f6d`. Note written after the fact, on 2026-10-22.
+Commit `910b474`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

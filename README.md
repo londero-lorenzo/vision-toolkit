@@ -124,5 +124,4 @@ CLA ([CONTRIBUTING.md](CONTRIBUTING.md)).
 - The anonymize use case releases frames of the real lectures to the assistant only after the
   reviewer's approval
   ([status](docs/usecases/anonymize.md#status)).
-- Next: the sessions of the [roadmap](docs/roadmap.md). The first rewrites the history (the commit
-  messages and one notebook line), and the repository goes on GitHub after it.
+- Next: the sessions of the [roadmap](docs/roadmap.md).

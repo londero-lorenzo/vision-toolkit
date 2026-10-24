@@ -1,7 +1,7 @@
 # 0016: `refine_quad` keeps a quad whose sides do not meet
 
 Date: 2026-10-22. Use case: board (`usecases/board/detect.py`).
-Commit `2bfeec1`. Note written after the fact, on 2026-10-22.
+Commit `1ab8f37`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

@@ -6,35 +6,12 @@ is removed from this page, and what it left open moves to the session it belongs
 
 ## Order
 
-1. **Session 1 alone, first.**
-2. **Then sessions 2, 4 and 5 in parallel**, each on its own branch. Session 3 follows session 2.
-3. **Session 6** once the skeleton of the app is designed.
+1. **Sessions 2, 4 and 5 in parallel**, each on its own branch. Session 3 follows session 2.
+2. **Session 6** once the skeleton of the app is designed.
 
 Sessions 2 and 3 change the same files of the board use case, so they do not run together. The
 other sessions share few files: the State in `CLAUDE.md`, the Status in `README.md` and
 `docs/architecture.md`. Their merge conflicts stay there.
-
-## Remote repository
-
-The repository has no remote: it does not exist on GitHub yet. It is created once session 1 is
-done, with the maintainer's confirmation, and the first push follows.
-
-## 1. History rewrite before the first push
-
-Short. It runs alone, with no other branch open: the rewrite changes every hash, from the first
-commit on, and an open branch would have to be moved onto the new history by hand.
-
-- **Before it:** the branch `docs/impersonal-form` and its worktree
-  `.claude/worktrees/impersonal-docs` are deleted. Both are merged into `main`.
-- **The messages:** the commits listed in "Before the first push" in `CLAUDE.md` are rewritten with
-  `git filter-branch --msg-filter`. A rebase would replay the merge and its conflict on 0017.
-- **The notebook:** in the same pass, `--index-filter` replaces in every commit the path that names
-  the lecturer in notebook 01 with `data/calibration/sample_arm.png` (decision 0006).
-- **The citations:** the hashes in `docs/fixes/` (each note and the table in its README) are
-  updated, and the item in `CLAUDE.md` is removed.
-- **The remote:** the GitHub repository is created and the history pushed, with the maintainer's
-  confirmation.
-  Private vulnerability reporting is turned on in its settings, as `SECURITY.md` expects.
 
 ## 2. Board: pointing on the real lectures
 

@@ -1,7 +1,7 @@
 # 0002: The pose model runs at confidence 0.1
 
 Date: 2026-10-20. Use case: board (`models/mediapipe/pose_landmarker.py`, `usecases/board/pipeline.py`).
-Commit `e638f6d`. Note written after the fact, on 2026-10-22.
+Commit `910b474`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

@@ -1,7 +1,7 @@
 # 0015: `foreground_mask` divides by `exposure_gain`
 
 Date: 2026-10-21. Use cases: board and anonymize (`core/foreground.py`).
-Commit `7ecc290`. Note written after the fact, on 2026-10-22.
+Commit `99f0cce`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

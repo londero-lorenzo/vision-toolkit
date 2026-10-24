@@ -19,9 +19,8 @@ pluggable, picked by name from a catalog.
   frames of a video and puts the frames in a review queue for the reviewer. Page:
   `docs/usecases/anonymize.md`, decision `docs/decisions/0005-anonymized-frames.md`. It has run on
   the four real lectures, and every frame was approved. Its doubt thresholds are still open (L6).
-- What is left is split into sessions in `docs/roadmap.md`: first the history rewrite before the
-  first push, then pointing on the real lectures, the anonymize thresholds and the `canvas` use
-  case, which absorbs `D:\Programmazione\Projects\image-stitching`. Where `canvas` lands (a
+- What is left is split into sessions in `docs/roadmap.md`: pointing on the real lectures, the
+  anonymize thresholds and the `canvas` use case, which absorbs `D:\Programmazione\Projects\image-stitching`. Where `canvas` lands (a
   registration task, OpenCV SIFT/ORB as models, warp and composite, `usecases/canvas/`) is in
   `docs/architecture.md`.
 
@@ -109,25 +108,10 @@ temporary, the next access causes a native crash (dead Jupyter kernel, access vi
   assistant), never a person, and use no "I/we". The lecturer is "the lecturer", with no pronoun.
 - **Git:** no commit without the maintainer's «sì». Propose the files and the message, then wait.
   Commits carry the assistant's `Co-Authored-By` line. Add files by name, never `git add -A`. Never `push --force` or
-  `--no-verify`. No remote and no `gh repo create` without confirmation.
-  Nothing has been pushed yet, and there is no remote: the GitHub repository is created once
-  session 1 of `docs/roadmap.md` is done. Until then the history can still be analysed and its
-  commits changed, with the maintainer's agreement. Once pushed, it no longer can.
-- **Before the first push:** `docs/impersonal-form` is merged into `main`, so the history can be
-  rewritten in one pass, with the maintainer's agreement:
-  - `7ecc290` and `17232eb`: the lecturer with no pronoun;
-  - `17232eb` and `6652c37`: the note they call 0001 is now 0017;
-  - `e638f6d`, `7ecc290` and `2bfeec1`: name their notes (0001–0010, 0011–0015, 0016);
-  - `notebooks/01_single_frame.ipynb` (`01_frame_singolo.ipynb` in `848ce89`), in every commit:
-    the path of the arm crop named after the lecturer becomes `data/calibration/sample_arm.png`
-    (decision 0006).
-
-  After the merge, `git log` names no other person and has no "I/we". The history holds a merge,
-  so the messages and that notebook line are rewritten with `git filter-branch --msg-filter` and
-  `--index-filter`: a rebase would replay the merge and its conflict on 0017. The rewrite changes
-  every hash, from the first commit `848ce89` on. `docs/fixes/`
-  cites them (each note and the table in its README), so the citations are updated after the
-  rewrite. This item is then removed.
+  `--no-verify`. No push and no change to the GitHub repository without confirmation.
+  The repository is public on GitHub (`londero-lorenzo/vision-toolkit`) and `main` is pushed: its
+  history is no longer rewritten. It was rewritten once, before the first push, so that no commit
+  names a person.
 - **Licence:** Apache-2.0 (`docs/decisions/0007-apache-2.0-licence.md`). Dependencies with permissive
   licences only (`scripts/check_licenses.py`); LGPL only as listed in `docs/licensing.md`. GPL and AGPL
   libraries, and models under copyleft or non-commercial licences, go in separate packages through the

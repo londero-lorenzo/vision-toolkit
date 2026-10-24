@@ -1,7 +1,7 @@
 # 0004: The board's sides are moved to its real edge
 
 Date: 2026-10-20. Use case: board (`usecases/board/detect.py`).
-Commit `e638f6d`. Note written after the fact, on 2026-10-22.
+Commit `910b474`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 

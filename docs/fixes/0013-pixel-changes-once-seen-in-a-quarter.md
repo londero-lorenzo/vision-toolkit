@@ -1,7 +1,7 @@
 # 0013: A pixel changes only once seen in a quarter of the window
 
 Date: 2026-10-21. Use case: board (`core/temporal.py`, `usecases/board/pipeline.py`).
-Commit `7ecc290`. Note written after the fact, on 2026-10-22.
+Commit `99f0cce`. Note written after the fact, on 2026-10-22.
 
 ## Problem
 
